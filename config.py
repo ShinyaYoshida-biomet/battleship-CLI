@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Config module to read config file.
 
 Example:
