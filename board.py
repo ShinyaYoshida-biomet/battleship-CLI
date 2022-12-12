@@ -10,22 +10,66 @@ import pandas as pd
 
 
 class Board:
-    def __init__(self, row_num, column_num):
-        r = int(row_num)
-        c = int(column_num)
+    """Board class of battleship game.
+    Board is an object with dataframe expressing a player's board
+    Example of 10 × 10 board
+
+               0  1  2  3  4  5  6  7  8  9
+            0  S  S  S  *  *  *  *  *  *  *
+            1  *  P  *  *  *  *  *  *  *  *
+            2  *  P  *  *  *  *  *  *  *  *
+            3  *  *  *  *  *  *  *  *  *  *
+            4  *  *  *  *  *  *  *  *  *  *
+            5  *  *  *  *  *  *  *  *  *  *
+            6  *  *  *  *  *  *  *  *  *  *
+            7  *  *  *  *  *  *  *  *  *  *
+            8  *  *  *  *  *  *  *  *  *  *
+            9  *  *  *  *  *  *  *  *  *  *
+    """
+
+    def __init__(self, row_num: int, column_num: int) -> None:
+        """Initialize Board class variables
+
+        Args: 
+            row_num (int): The number of rows of the board.
+            column_num (int): The number of columns of the board.
+        """
+        r = row_num
+        c = column_num
+        # Make dataframe of board
         self.board = pd.DataFrame(
             [['*']*r]*c,
             index=list(range(0, r)),
             columns=list(range(0, c)),
         )
 
-    def set_ship(self, orient, x, y, ship_symbol, ship_size):
+    def set_ship(
+            self,
+            orient: str,
+            x: int,
+            y: int,
+            ship_symbol: str,
+            ship_size: int
+    ) -> None:
+        """Set ships on the board.
+
+        This method is called only when placement boards are renewed.
+
+        Args:
+            orient (str): The orient indicating horizontal(H) or vertical(V)
+            x (int): X conrdinate on the board.
+            y (int): Y conrdinate on the board.
+            ship_symbol (str): The symbol of ships specified in a config file.
+            shop_size (str): The length of a ship to place.
+        """
+        # When horizontal
         if orient == 'H':
             self.board.iloc[
                 x,
                 y:(y + ship_size)
             ] = ship_symbol
 
+        # When vertical
         elif orient == 'V':
             self.board.iloc[
                 x:(x + ship_size),
