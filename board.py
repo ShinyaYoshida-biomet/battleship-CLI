@@ -50,7 +50,7 @@ class Board:
             y: int,
             ship_symbol: str,
             ship_size: int
-    ) -> None:
+    ) -> bool:
         """Set ships on the board.
 
         This method is called only when placement boards are renewed.
@@ -64,14 +64,23 @@ class Board:
         """
         # When horizontal
         if orient == 'H':
-            self.board.iloc[
-                x,
-                y:(y + ship_size)
-            ] = ship_symbol
+            if y + ship_size > self.board.shape[1]:
+                return False
+            else:
+                self.board.iloc[
+                    x,
+                    y:(y + ship_size)
+                ] = ship_symbol
+
+                return True
 
         # When vertical
         elif orient == 'V':
-            self.board.iloc[
-                x:(x + ship_size),
-                y
-            ] = ship_symbol
+            if x + ship_size > self.board.shape[0]:
+                return False
+            else:
+                self.board.iloc[
+                    x:(x + ship_size),
+                    y
+                ] = ship_symbol
+                return True
