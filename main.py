@@ -37,9 +37,6 @@ def main():
         game.display_placement_board(player)
         # Initialize battleship location
         for ship_symbol, ship_size in game.config.ship_dict.items():
-            # get information to set a battleship
-            game.get_orient(player, ship_symbol, ship_size)
-            game.get_location(ship_symbol, ship_size)
             # set a battleship based on the information
             game.set_ships(player, ship_symbol, ship_size)
 
@@ -81,6 +78,4 @@ if __name__ == '__main__':
     main()
 
     # ToDo
-    # 不要なモジュールを削除したり結合したり。
-    # ボードの広さをはみ出てしまった時にやり直す処理
-    # そのほかコメント。
+    # Ambiguousity of the codes

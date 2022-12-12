@@ -67,13 +67,19 @@ class Game:
             ship_symbol (str): The name(symbol) of a ship to set.
             ship_size (int): The length of a ship to set.
         """
-        self.players[player_name].placement_board.set_ship(
-            self.orient,
-            self.x,
-            self.y,
-            ship_symbol,
-            ship_size
-        )
+
+        self.get_orient(player_name, ship_symbol, ship_size)
+        status = False
+        while not status:
+            # get information to set a battleship
+            self.get_location(ship_symbol, ship_size)
+            status = self.players[player_name].placement_board.set_ship(
+                self.orient,
+                self.x,
+                self.y,
+                ship_symbol,
+                ship_size
+            )
 
     def get_orient(
         self,
