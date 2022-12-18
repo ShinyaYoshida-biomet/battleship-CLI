@@ -18,6 +18,9 @@ def main():
     (There are no arguments and global variables.)
     """
 
+    print("Battle ship game has started!!!")
+    with open('images/ship_ascii', 'r') as f:
+        print(f.read())
     # obtain config path
     config_message = 'Please enter the path to the configuration file for this game:'
     config_path = input(config_message)
