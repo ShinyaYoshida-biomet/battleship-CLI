@@ -88,7 +88,6 @@ class Game:
                 self.h_symbols,
                 self.v_symbols
             )
-            print("status", status)
 
     def get_orient(
         self,
@@ -137,7 +136,6 @@ class Game:
             if len(re.findall('[0-9]+', location)) >= 2:
                 obtained = True
 
-        print("out of while")
         location = location.split(' ')
         self.x = int(location[0])
         self.y = int(location[1])
@@ -168,13 +166,19 @@ class Game:
         """
         # input messsage when CLI input interface is displayed.
         message_ = f"{player_name}, enter the location you want to fire at in the form row col:"
-        obtained = True
-        while obtained:
+        obtained = False
+        while not obtained:
             # location to fire.
             fire_location = input(message_).rstrip().lstrip()
-            if len(re.findall('[0-9]+', fire_location)) == 2:
-                obtained = False
-        fire_location = fire_location.split(' ')
+            # condition for the num of number is 2. EG. '9 9' is OK, '9 9 9' is NG.
+            number_condition = len(re.findall('[0-9]+', fire_location)) == 2
+
+            fire_location = fire_location.split(' ')
+            row_num_condition = int(fire_location[0]) < self.config.row_num
+            col_num_condition = int(fire_location[1]) < self.config.column_num
+            if (number_condition) and (row_num_condition) and (col_num_condition):
+                obtained = True
+
         self.fire_x = int(fire_location[0])
         self.fire_y = int(fire_location[1])
 
