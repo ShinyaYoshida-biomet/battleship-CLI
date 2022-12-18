@@ -49,7 +49,9 @@ class Board:
             x: int,
             y: int,
             ship_symbol: str,
-            ship_size: int
+            ship_size: int,
+            h_symbols: list,
+            v_symbols: list
     ) -> bool:
         """Set ships on the board.
 
@@ -61,9 +63,11 @@ class Board:
             y (int): Y conrdinate on the board.
             ship_symbol (str): The symbol of ships specified in a config file.
             shop_size (str): The length of a ship to place.
+            h_symbols (list): List of horizontal symbols like 'hori', 'horizont', etc...
+            v_symbols (list): List of vertical symbols like 'vert', 'vertica', etc...
         """
         # When horizontal
-        if orient == 'H':
+        if orient in h_symbols:
             if y + ship_size > self.board.shape[1]:
                 return False
             else:
@@ -75,7 +79,7 @@ class Board:
                 return True
 
         # When vertical
-        elif orient == 'V':
+        elif orient in v_symbols:
             if x + ship_size > self.board.shape[0]:
                 return False
             else:
@@ -84,3 +88,6 @@ class Board:
                     y
                 ] = ship_symbol
                 return True
+
+        else:
+            raise ValueError(f'Non defined orient: {orient}')
