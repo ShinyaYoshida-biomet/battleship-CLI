@@ -39,6 +39,12 @@ class Game:
         self.y = 0
         self.fire_x = 0
         self.fire_y = 0
+        self.h_symbol = 'horizontal'
+        self.h_symbols = [self.h_symbol[:i+1]
+                          for i in range(len(self.h_symbol))]
+        self.v_symbol = 'vertical'
+        self.v_symbols = [self.v_symbol[:i+1]
+                          for i in range(len(self.v_symbol))]
 
     def set_players(self) -> None:
         """Function to initialize Player class.
@@ -78,8 +84,11 @@ class Game:
                 self.x,
                 self.y,
                 ship_symbol,
-                ship_size
+                ship_size,
+                self.h_symbols,
+                self.v_symbols
             )
+            print("status", status)
 
     def get_orient(
         self,
@@ -98,10 +107,13 @@ class Game:
         message_ = f"{player_name}, enter the orientation of"
         message_ += f"your {ship_symbol}, which is {ship_size} long [H/V]:"
 
+        # orient symbol abreviations like 'horizo', 'verti', etc.
+        orient_symbols = []
+
         orient = ''
-        # H: Horizontal, V: Vertical
-        while orient not in ['H', 'V']:
-            orient = input(message_).rstrip().lstrip()
+        # if orient expression was wrong, let user input it again.
+        while orient not in self.h_symbols + self.v_symbols:
+            orient = input(message_).rstrip().lstrip().lower()
         self.orient = orient
 
     def get_location(
@@ -118,13 +130,14 @@ class Game:
         # input messsage when CLI input interface is displayed.
         message_ = f"Enter the starting location for your {ship_symbol}, "
         message_ += f"which is {ship_size} long, in the form row col(eg. 0 4): "
-        obtained = True
-        while obtained:
+        obtained = False
+        while not obtained:
             location = input(message_).rstrip().lstrip()
-            # If it is a correct format,
-            # 2 characters should be contained in the variable location
-            if len(re.findall('[0-9]+', location)) == 2:
-                obtained = False
+            # 2 numbers should be contained in the variable location
+            if len(re.findall('[0-9]+', location)) >= 2:
+                obtained = True
+
+        print("out of while")
         location = location.split(' ')
         self.x = int(location[0])
         self.y = int(location[1])
