@@ -10,7 +10,6 @@ Example:
     game.set_players()
 """
 
-import re
 import time
 from typing import List, Tuple
 
@@ -189,7 +188,6 @@ class Game:
             ship_symbol (str): The name(symbol) of a ship to set.
             ship_size (int): The length of a ship to set.
         """
-        print(f"\n{player_name} is placing their {ship_symbol} (size {ship_size})...")
         
         # Get occupied positions from current board
         occupied_positions = self._get_occupied_positions(player_name)
@@ -216,9 +214,8 @@ class Game:
         )
         
         if status:
-            print(f"{player_name} placed {ship_symbol} at ({ai_x}, {ai_y}) {ai_orientation}")
+            pass  # Ship placed successfully by AI
         else:
-            print(f"Warning: {player_name} ship placement failed, trying again...")
             # Fallback: try again (should be rare with AI logic)
             self._set_computer_ship(player_name, ship_symbol, ship_size)
 
