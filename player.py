@@ -78,22 +78,33 @@ class Player:
         ] = fired_symbol
 
     def get_left_ships(self) -> None:
-        """Method to know non-destryed ships.
+        """Method to know non-destroyed ships.
 
         This function computes the left ships in player's board and
         let you know when entire ship is destroyed.
         """
-
-        # get unique symbols in the board
+        # Get all cells from the placement board
         all_cells = self.placement_board.board.values.flatten().tolist()
-        left_ships = [
-            cell for cell in all_cells if cell not in ['*', 'X', 'O']]
-        left_ships = np.unique(left_ships)
+        
+        # Count intact cells for each ship type
+        ship_counts = {}
+        for cell in all_cells:
+            # Skip water ('*'), missed shots ('X'), and hit ships ('O')
+            if cell not in ['*', 'X', 'O']:  
+                ship_counts[cell] = ship_counts.get(cell, 0) + 1
+        
+        # Get unique ship types that still have intact cells
+        current_left_ships = list(ship_counts.keys())
+        
+        # Find ships that were destroyed since last check
+        previous_ships = set(self.left_ships) if hasattr(self, 'left_ships') else set()
+        current_ships = set(current_left_ships)
+        diff_left_ships = list(previous_ships - current_ships)
 
-        # Lost ships when comparing previous phase.
-        diff_left_ships = list(set(self.left_ships) - set(left_ships))
-
-        # If there are changes from previous phase, the destroyed ship is announced.
+        # Announce destroyed ships
         if len(diff_left_ships) > 0:
-            print(f"{self.name}'s {diff_left_ships[0]} is destroyed!")
-            self.left_ships = left_ships
+            for destroyed_ship in diff_left_ships:
+                print(f"{self.name}'s {destroyed_ship} is destroyed!")
+        
+        # Update left ships
+        self.left_ships = current_left_ships
