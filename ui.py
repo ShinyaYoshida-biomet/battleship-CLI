@@ -387,10 +387,10 @@ class BattleshipUI:
                     'placement_mode',
                     message="Choose your placement method",
                     choices=[
+                        ('🎲 Random - Automatically place all ships (Recommended)', 'random'),
                         ('🎯 Manual - Place each ship yourself', 'manual'),
-                        ('🎲 Random - Automatically place all ships', 'random'),
                     ],
-                    default='manual',
+                    default='random',  # Changed to random as default
                     carousel=True,  # Allow wrapping around
                 )
             ]
@@ -415,8 +415,8 @@ class BattleshipUI:
             self.console.print(f"[yellow]Arrow keys not available. Using number selection.[/yellow]")
             
             self.console.print("\n[dim]Choose your option:[/dim]")
-            self.console.print("  [bold green]1[/bold green]. 🎯 Manual - Place each ship yourself")
-            self.console.print("  [bold green]2[/bold green]. 🎲 Random - Automatically place all ships")
+            self.console.print("  [bold green]1[/bold green]. 🎲 Random - Automatically place all ships [dim](Recommended)[/dim]")
+            self.console.print("  [bold green]2[/bold green]. 🎯 Manual - Place each ship yourself")
             self.console.print()
             
             from rich.prompt import Prompt
@@ -426,16 +426,16 @@ class BattleshipUI:
                     choice = Prompt.ask(
                         "[bold cyan]Enter your choice[/bold cyan]", 
                         choices=["1", "2"], 
-                        default="1",
+                        default="1",  # Default to "1" which is now random
                         show_choices=False
                     )
                     
                     if choice == "1":
-                        self.console.print("[green]✓ Manual placement selected![/green]")
-                        return "manual"
-                    else:
                         self.console.print("[green]✓ Random placement selected![/green]")
                         return "random"
+                    else:
+                        self.console.print("[green]✓ Manual placement selected![/green]")
+                        return "manual"
                         
                 except KeyboardInterrupt:
                     raise
@@ -453,17 +453,17 @@ class BattleshipUI:
             from rich.prompt import Prompt
             
             self.console.print("\n[dim]Choose your option:[/dim]")
-            self.console.print("  [bold green]1[/bold green]. 🎯 Manual - Place each ship yourself")
-            self.console.print("  [bold green]2[/bold green]. 🎲 Random - Automatically place all ships")
+            self.console.print("  [bold green]1[/bold green]. 🎲 Random - Automatically place all ships [dim](Recommended)[/dim]")
+            self.console.print("  [bold green]2[/bold green]. 🎯 Manual - Place each ship yourself")
             
-            choice = Prompt.ask("Enter your choice", choices=["1", "2"], default="1")
+            choice = Prompt.ask("Enter your choice", choices=["1", "2"], default="1")  # Default to "1" which is now random
             
             if choice == "1":
-                self.console.print("[green]✓ Manual placement selected![/green]")
-                return "manual"
-            else:
                 self.console.print("[green]✓ Random placement selected![/green]")
                 return "random"
+            else:
+                self.console.print("[green]✓ Manual placement selected![/green]")
+                return "manual"
             
     def announce_vs(self, player1: str, player2: str):
         """Announce the matchup."""
