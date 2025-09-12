@@ -215,7 +215,8 @@ class Game:
         
         for x in range(board.shape[0]):
             for y in range(board.shape[1]):
-                if board.iloc[x, y] != ' ':
+                # Check if the cell is not water ('*' for placement board)
+                if board.iloc[x, y] != '*':
                     occupied.append((x, y))
         
         return occupied
@@ -273,11 +274,12 @@ class Game:
         firing_board = self.players[player_name].firing_board.board
         placement_board = self.players[player_name].placement_board.board
         
-        # Use the Rich UI to display side-by-side boards
+        # Use the Rich UI to display side-by-side boards with ship status
         ui.display_boards_side_by_side(
             player_name=player_name,
             firing_board=firing_board,
-            placement_board=placement_board
+            placement_board=placement_board,
+            ships_config=self.config.ship_dict
         )
 
     def get_fire_location(self, player_name: str) -> None:
