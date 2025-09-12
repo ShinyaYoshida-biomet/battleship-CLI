@@ -111,9 +111,29 @@ class Game:
             ship_symbol (str): The name(symbol) of a ship to set.
             ship_size (int): The length of a ship to set.
         """
+        ship_names = {
+            'C': 'Carrier',
+            'B': 'Battleship', 
+            'D': 'Destroyer',
+            'S': 'Submarine',
+            'P': 'Patrol boat'
+        }
+        
+        ship_display = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+        
         self.get_orient(player_name, ship_symbol, ship_size)
         status = False
+        attempts = 0
+        
         while not status:
+            attempts += 1
+            if attempts > 1:
+                print(f"\n❌ Cannot place {ship_display} there!")
+                print("   Reasons this might happen:")
+                print("   • Ship would go off the board")
+                print("   • Ship would overlap with another ship")
+                print("   Let's try a different position...\n")
+            
             # get information to set a battleship
             self.get_location(ship_symbol, ship_size)
             status = self.players[player_name].placement_board.set_ship(
@@ -125,6 +145,8 @@ class Game:
                 self.h_symbols,
                 self.v_symbols
             )
+            
+        print(f"🎉 {ship_display} successfully placed!")
 
     def _set_computer_ship(
         self,
@@ -204,17 +226,34 @@ class Game:
             ship_symbol (str): The name(symbol) of a ship to set.
             ship_size (int): The length of a ship to set.
         """
-        # input messsage when CLI input interface is displayed.
-        message_ = f"{player_name}, enter the orientation of"
-        message_ += f"your {ship_symbol}, which is {ship_size} long [H/V]:"
-
-        # orient symbol abreviations like 'horizo', 'verti', etc.
-        orient_symbols = []
-
+        # Create clear, user-friendly message
+        ship_names = {
+            'C': 'Carrier',
+            'B': 'Battleship', 
+            'D': 'Destroyer',
+            'S': 'Submarine',
+            'P': 'Patrol boat'
+        }
+        
+        ship_display = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+        
+        print(f"\n🚢 {player_name}, placing your {ship_display}")
+        print(f"   Size: {ship_size} cells")
+        print("   Choose orientation:")
+        print("   H = Horizontal (→→→)")
+        print("   V = Vertical   (↓)")
+        print("                  (↓)")
+        print("                  (↓)")
+        
         orient = ''
         # if orient expression was wrong, let user input it again.
         while orient not in self.h_symbols + self.v_symbols:
-            orient = input(message_).rstrip().lstrip().lower()
+            orient = input(f"Enter orientation [H=Horizontal/V=Vertical]: ").rstrip().lstrip().lower()
+            if orient not in self.h_symbols + self.v_symbols:
+                print("❌ Please enter 'H' for Horizontal or 'V' for Vertical")
+        
+        direction_text = "Horizontally" if orient in self.h_symbols else "Vertically"
+        print(f"✅ Placing {direction_text}!")
         self.orient = orient
 
     def get_location(
@@ -228,17 +267,40 @@ class Game:
             ship_symbol (str): The name(symbol) of a ship to set.
             ship_size (int): The length of a ship to set.
         """
-        # input messsage when CLI input interface is displayed.
-        message_ = f"Enter the starting location for your {ship_symbol}, "
-        message_ += f"which is {ship_size} long, in the form row col(eg. 0 4): "
+        ship_names = {
+            'C': 'Carrier',
+            'B': 'Battleship', 
+            'D': 'Destroyer',
+            'S': 'Submarine',
+            'P': 'Patrol boat'
+        }
+        
+        ship_display = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+        
+        print(f"\n📍 Where do you want to place your {ship_display}?")
+        print(f"   This ship is {ship_size} cells long")
+        print("   Enter the starting position as: row column")
+        print("   Example: '2 5' means row 2, column 5")
+        print("   (Remember: coordinates start from 0)")
+        
         obtained = False
         while not obtained:
-            location = input(message_).rstrip().lstrip()
+            location = input("Starting position (row column): ").rstrip().lstrip()
             # 2 numbers should be contained in the variable location
-            if len(re.findall('[0-9]+', location)) >= 2:
-                obtained = True
+            numbers = re.findall('[0-9]+', location)
+            if len(numbers) >= 2:
+                row, col = int(numbers[0]), int(numbers[1])
+                # Check if coordinates are within bounds
+                if (0 <= row < self.config.row_num and 
+                    0 <= col < self.config.column_num):
+                    obtained = True
+                    print(f"✅ Starting at row {row}, column {col}")
+                else:
+                    print(f"❌ Position out of bounds! Board is {self.config.row_num}x{self.config.column_num} (0-{self.config.row_num-1}, 0-{self.config.column_num-1})")
+            else:
+                print("❌ Please enter two numbers separated by space (e.g., '2 5')")
 
-        location = location.split(' ')
+        location = location.split()
         self.x = int(location[0])
         self.y = int(location[1])
 
@@ -280,23 +342,40 @@ class Game:
         Args:
             player_name (str): Name of turn player.
         """
-        # input messsage when CLI input interface is displayed.
-        message_ = f"{player_name}, enter the location you want to fire at in the form row col:"
+        print(f"\n🎯 {player_name}, time to fire!")
+        print("   Enter the coordinates you want to attack")
+        print("   Format: row column (e.g., '3 7' for row 3, column 7)")
+        print("   Coordinates start from 0")
+        print(f"   Valid range: 0-{self.config.row_num-1} for rows, 0-{self.config.column_num-1} for columns")
+        
         obtained = False
         while not obtained:
-            # location to fire.
-            fire_location = input(message_).rstrip().lstrip()
-            # condition for the num of number is 2. EG. '9 9' is OK, '9 9 9' is NG.
-            number_condition = len(re.findall('[0-9]+', fire_location)) == 2
+            fire_location = input("Target coordinates (row column): ").rstrip().lstrip()
+            
+            # Check if we have exactly 2 numbers
+            numbers = re.findall('[0-9]+', fire_location)
+            if len(numbers) != 2:
+                print("❌ Please enter exactly two numbers separated by space (e.g., '3 7')")
+                continue
+            
+            row, col = int(numbers[0]), int(numbers[1])
+            
+            # Check bounds
+            if not (0 <= row < self.config.row_num and 0 <= col < self.config.column_num):
+                print(f"❌ Coordinates out of bounds! Valid range: 0-{self.config.row_num-1}, 0-{self.config.column_num-1}")
+                continue
+                
+            # Check if already fired at this location
+            current_cell = self.players[player_name].firing_board.board.iloc[row, col]
+            if current_cell != ' ':
+                print(f"❌ You already fired at ({row}, {col})! Choose a different target.")
+                continue
+                
+            obtained = True
+            print(f"🎯 Firing at row {row}, column {col}!")
 
-            fire_location = fire_location.split(' ')
-            row_num_condition = int(fire_location[0]) < self.config.row_num
-            col_num_condition = int(fire_location[1]) < self.config.column_num
-            if (number_condition) and (row_num_condition) and (col_num_condition):
-                obtained = True
-
-        self.fire_x = int(fire_location[0])
-        self.fire_y = int(fire_location[1])
+        self.fire_x = row
+        self.fire_y = col
 
     def _get_computer_fire_location(self, player_name: str) -> None:
         """Get fire location from computer AI.
