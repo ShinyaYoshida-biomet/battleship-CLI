@@ -277,10 +277,9 @@ def main():
             # Show turn header with Rich UI
             ui.show_turn_header(player, turn_counter)
             
-            # Only show boards to human players during their turn
+            # Start reactive board display for human players
             if game.is_human_player(player):
-                # Use side-by-side board display for humans
-                game.display_boards_side_by_side(player)
+                game.start_reactive_display(player)
             else:
                 ui.console.print(f"\n[bold blue]{player} is analyzing the battlefield...[/bold blue]")
 
@@ -297,6 +296,7 @@ def main():
 
             # When there are no left ships game is end.
             if len(left_ships) == 0:
+                game.stop_reactive_display()  # Clean up reactive displays
                 ui.show_game_winner(player, game.is_human_player(player))
                 finish_flag = True
                 break
@@ -308,9 +308,12 @@ def main():
             # Appropriate pause based on player type
             if game.is_human_player(player):
                 time.sleep(1.5)
-                ui.clear_screen()
+                # Removed ui.clear_screen() for reactive display compatibility
             else:
                 time.sleep(2)
+    
+    # Ensure cleanup of reactive displays
+    game.stop_reactive_display()
 
 
 if __name__ == '__main__':

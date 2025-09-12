@@ -131,11 +131,11 @@ class Game:
         while not status:
             attempts += 1
             if attempts > 1:
-                print(f"\n❌ Cannot place {ship_display} there!")
-                print("   Reasons this might happen:")
-                print("   • Ship would go off the board")
-                print("   • Ship would overlap with another ship")
-                print("   Let's try a different position...\n")
+                ui.console.print(f"\n[red]❌ Cannot place {ship_display} there![/red]")
+                ui.console.print("[yellow]   Reasons this might happen:[/yellow]")
+                ui.console.print("[yellow]   • Ship would go off the board[/yellow]")
+                ui.console.print("[yellow]   • Ship would overlap with another ship[/yellow]")
+                ui.console.print("[yellow]   Let's try a different position...[/yellow]\n")
             
             # get information to set a battleship
             self.get_location(ship_symbol, ship_size)
@@ -149,7 +149,12 @@ class Game:
                 self.v_symbols
             )
             
-        print(f"🎉 {ship_display} successfully placed!")
+        ui.console.print(f"[green]🎉 {ship_display} successfully placed![/green]")
+        
+        # Show the updated board after successful placement
+        placement_board = self.players[player_name].placement_board.board
+        board_table = ui.create_board_table(placement_board, f"🚢 {player_name}'s Fleet (Updated)", show_ships=True)
+        ui.console.print(board_table)
 
     def _set_computer_ship(
         self,
