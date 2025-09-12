@@ -14,6 +14,7 @@ class ShipStatus(Enum):
     DESTROYED = ("DESTROYED", "💥", "red")
     UNKNOWN = ("UNKNOWN", "❓", "blue")
     HIT_DAMAGED = ("HIT/DAMAGED", "⚠️", "yellow")
+    ESTIMATED_INTACT = ("INTACT", "❓", "blue")  # For enemy intel
     
     def __init__(self, display_name: str, emoji: str, color: str):
         self.display_name = display_name

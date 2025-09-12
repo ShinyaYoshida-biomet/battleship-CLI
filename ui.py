@@ -230,18 +230,25 @@ class BattleshipUI:
         
         for ship_symbol, ship_size in ships_config.items():
             ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
-            status_key = intel.get(ship_symbol, "UNKNOWN")
+            ship_intel = intel.get(ship_symbol, {'status': 'UNKNOWN', 'current': None, 'total': ship_size})
             
-            # Map analysis result to enum
+            status_key = ship_intel['status']
+            current = ship_intel.get('current')
+            total = ship_intel.get('total', ship_size)
+            
+            # Map analysis result to enum and format
             if status_key == "DESTROYED":
                 status = ShipStatus.DESTROYED
-            elif status_key == "HIT/DAMAGED":
-                status = ShipStatus.HIT_DAMAGED
+                status_text += status.format_status(ship_name) + "\n"
+            elif status_key == "DAMAGED":
+                status = ShipStatus.HIT_DAMAGED  
+                status_text += f"  [{status.color}]{status.emoji} {ship_name}: {status.display_name} ({current}/{total}) [dim]~Est[/dim][/{status.color}]\n"
+            elif status_key == "INTACT":
+                # For enemy ships, we show "INTACT" as estimated since we can't be 100% sure
+                status_text += f"  [blue]❓ {ship_name}: INTACT ({total}/{total}) [dim]~Est[/dim][/blue]\n"
             else:
-                status = ShipStatus.UNKNOWN
-            
-            # Format status consistently
-            status_text += status.format_status(ship_name) + "\n"
+                # Unknown
+                status_text += f"  [blue]❓ {ship_name}: UNKNOWN[/blue]\n"
         
         return Panel(
             status_text.rstrip(),
@@ -261,23 +268,85 @@ class BattleshipUI:
         all_firing_cells = firing_board.values.flatten().tolist()
         total_hits = sum(1 for cell in all_firing_cells if cell == 'O')
         
-        # Calculate total ship cells for destroyed ships
+        # Calculate cells used by destroyed ships
         destroyed_ships = [ship for ship in ships_config.keys() if ship not in opponent_left_ships]
         destroyed_cells = sum(ships_config[ship] for ship in destroyed_ships)
         
-        # If we have more hits than destroyed ship cells, some remaining ships are hit
+        # Hits on remaining ships (ensure non-negative)
         hits_on_remaining = max(0, total_hits - destroyed_cells)
         
         intel = {}
-        for ship_symbol in ships_config.keys():
-            if ship_symbol not in opponent_left_ships:
-                intel[ship_symbol] = "DESTROYED"
-            elif hits_on_remaining > 0:
-                intel[ship_symbol] = "HIT/DAMAGED"
-                hits_on_remaining -= 1  # Account for this hit
-            else:
-                intel[ship_symbol] = "UNKNOWN"
+        remaining_ships = [(ship, size) for ship, size in ships_config.items() 
+                          if ship in opponent_left_ships]
+        
+        # Handle destroyed ships
+        for ship in destroyed_ships:
+            intel[ship] = {
+                'status': 'DESTROYED',
+                'current': 0,
+                'total': ships_config[ship]
+            }
+        
+        # Handle remaining ships
+        if remaining_ships:
+            if hits_on_remaining > 0:
+                # Sort ships by size (larger ships more likely to be hit first)
+                remaining_ships.sort(key=lambda x: x[1], reverse=True)
                 
+                remaining_hits = hits_on_remaining
+                
+                # First pass: allocate hits to ships
+                for ship_symbol, ship_size in remaining_ships:
+                    if remaining_hits > 0:
+                        # Estimate hits on this ship (at least 1, at most ship_size-1)
+                        # Larger ships get more hits proportionally
+                        total_remaining_cells = sum(size for _, size in remaining_ships)
+                        proportion = ship_size / total_remaining_cells
+                        estimated_hits = max(1, min(ship_size - 1, 
+                                                  round(remaining_hits * proportion)))
+                        
+                        # Don't allocate more hits than we have
+                        actual_hits = min(estimated_hits, remaining_hits, ship_size - 1)
+                        remaining_hits -= actual_hits
+                        
+                        intel[ship_symbol] = {
+                            'status': 'DAMAGED',
+                            'current': ship_size - actual_hits,
+                            'total': ship_size
+                        }
+                    else:
+                        # No hits allocated to this ship
+                        intel[ship_symbol] = {
+                            'status': 'INTACT',
+                            'current': ship_size,
+                            'total': ship_size
+                        }
+                
+                # Second pass: distribute any remaining hits
+                while remaining_hits > 0:
+                    distributed = False
+                    for ship_symbol, _ in remaining_ships:
+                        if remaining_hits <= 0:
+                            break
+                        ship_data = intel[ship_symbol]
+                        if ship_data['current'] > 1:  # Can take another hit
+                            ship_data['current'] -= 1
+                            if ship_data['status'] == 'INTACT':
+                                ship_data['status'] = 'DAMAGED'
+                            remaining_hits -= 1
+                            distributed = True
+                    
+                    if not distributed:  # Prevent infinite loop
+                        break
+            else:
+                # No hits on remaining ships - all intact
+                for ship_symbol, ship_size in remaining_ships:
+                    intel[ship_symbol] = {
+                        'status': 'INTACT',
+                        'current': ship_size,
+                        'total': ship_size
+                    }
+        
         return intel
         
     def prompt_game_mode(self) -> str:
