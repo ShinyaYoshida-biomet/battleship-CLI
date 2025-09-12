@@ -324,7 +324,7 @@ class Game:
         """
         # Show computer thinking with Rich UI
         ui.show_computer_thinking(player_name)
-        time.sleep(1)  # Add suspense
+        time.sleep(0.3)  # Brief suspense
         
         # Get current firing board state
         firing_board_data = self._get_board_data(player_name, 'firing')

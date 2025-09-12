@@ -80,12 +80,13 @@ class CLIOutputAdapter(GameOutputPort):
                 )
                 ui.console.print(board_table)
         else:
-            # During battle, show both boards side by side
+            # During battle, show both boards side by side with ship status
             if firing_board is not None and placement_board is not None:
                 ui.display_boards_side_by_side(
                     state.current_player,
                     firing_board,
-                    placement_board
+                    placement_board,
+                    state.ships_config
                 )
             
         # Show turn information
@@ -105,7 +106,7 @@ class CLIOutputAdapter(GameOutputPort):
         ship_symbol = result.ship_symbol if result.hit else None
         # Note: We'll need to extract opponent name from context
         # For now, use generic "opponent"
-        ui.show_fire_result("Player", "Opponent", 0, 0, result.hit, ship_symbol)
+        ui.show_fire_result("Player", "Opponent", 0, 0, result.hit, ship_symbol, result.ship_destroyed)
     
     async def show_winner(self, winner: str, is_human: bool):
         """Display game winner."""

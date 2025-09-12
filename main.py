@@ -260,11 +260,11 @@ def main():
         # clear console for good appearance
         if game.is_human_player(player):
             ui.console.print("\n[green]Ship placement complete! Get ready for battle...[/green]")
-            time.sleep(2)  # Automatic pause instead of manual input
+            time.sleep(0.5)  # Brief pause
             ui.clear_screen()
         else:
             ui.console.print(f"[blue]{player} has finished placing ships![/blue]")
-            time.sleep(1)
+            time.sleep(0.3)
 
     # Fire part - main game loop
     finish_flag = False
@@ -302,11 +302,11 @@ def main():
 
             # Show result to human player if it was computer's turn  
             if not game.is_human_player(player) and game.is_human_player(opponent_player):
-                time.sleep(2)  # Automatic pause instead of manual input
+                time.sleep(0.5)  # Brief pause
             
             # Appropriate pause based on player type
             if game.is_human_player(player):
-                time.sleep(1.5)
+                time.sleep(0.3)
                 ui.clear_screen()
             else:
                 time.sleep(2)

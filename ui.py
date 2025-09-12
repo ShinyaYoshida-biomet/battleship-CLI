@@ -123,7 +123,7 @@ class BattleshipUI:
                 if cell_value == 'O':  # Hit
                     styled_cell = "[bold green]🎯[/bold green]"
                 elif cell_value == 'X':  # Miss
-                    styled_cell = "[bold red]❌[/bold red]"
+                    styled_cell = "[dim]~[/dim][red]X[/red][dim]~[/dim]"
                 elif cell_value == ' ':  # Unknown
                     styled_cell = "[dim]~[/dim]"
                 elif cell_value == '*':  # Water (placement board)
@@ -140,8 +140,8 @@ class BattleshipUI:
         return table
         
     def display_boards_side_by_side(self, player_name: str, firing_board: pd.DataFrame, 
-                                  placement_board: pd.DataFrame, opponent_name: str = "Enemy"):
-        """Display firing and placement boards side by side."""
+                                  placement_board: pd.DataFrame, ships_config: dict = None, opponent_name: str = "Enemy"):
+        """Display firing and placement boards side by side with ship status."""
         
         firing_table = self.create_board_table(
             firing_board, 
@@ -165,6 +165,46 @@ class BattleshipUI:
             border_style="bright_cyan",
             padding=(1, 2)
         ))
+        
+        # Show ship status if ships_config is provided
+        if ships_config:
+            ship_status_panel = self.create_ship_status_panel(placement_board, ships_config)
+            self.console.print(ship_status_panel)
+
+    def create_ship_status_panel(self, placement_board: pd.DataFrame, ships_config: dict) -> Panel:
+        """Create a panel showing current ship status."""
+        ship_names = {
+            'C': 'Carrier', 'B': 'Battleship', 'D': 'Destroyer',
+            'S': 'Submarine', 'P': 'Patrol boat'
+        }
+        
+        status_text = "[bold]🚢 Ship Status:[/bold]\n"
+        
+        # Get all cells from placement board
+        all_cells = placement_board.values.flatten().tolist()
+        
+        for ship_symbol, ship_size in ships_config.items():
+            ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+            
+            # Count remaining cells for this ship
+            remaining_cells = sum(1 for cell in all_cells if cell == ship_symbol)
+            
+            if remaining_cells == 0:
+                # Ship is destroyed
+                status_text += f"  [red]💥 {ship_name}: DESTROYED[/red]\n"
+            elif remaining_cells < ship_size:
+                # Ship is damaged
+                status_text += f"  [yellow]⚠️  {ship_name}: DAMAGED ({remaining_cells}/{ship_size})[/yellow]\n"
+            else:
+                # Ship is intact
+                status_text += f"  [green]✅ {ship_name}: INTACT ({remaining_cells}/{ship_size})[/green]\n"
+        
+        return Panel(
+            status_text.rstrip(),
+            title="📊 Fleet Status",
+            border_style="bright_yellow",
+            padding=(0, 1)
+        )
         
     def prompt_game_mode(self) -> str:
         """Prompt user for game mode selection."""
@@ -277,7 +317,7 @@ class BattleshipUI:
                 self.console.print("[red]❌ Please enter valid numbers (e.g., '3 7')[/red]")
                 
     def show_fire_result(self, player_name: str, target_player: str, row: int, col: int, 
-                        hit: bool, ship_symbol: str = None):
+                        hit: bool, ship_symbol: str = None, ship_destroyed: bool = False):
         """Show the result of a fire action."""
         if hit:
             ship_names = {
@@ -285,13 +325,20 @@ class BattleshipUI:
                 'S': 'Submarine', 'P': 'Patrol boat'
             }
             ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
-            message = f"[bold green]🎯 HIT![/bold green] {player_name} hit {target_player}'s {ship_name} at ({row}, {col})"
+            
+            if ship_destroyed:
+                message = f"[bold red]💥 SHIP DESTROYED![/bold red] {player_name} sunk {target_player}'s {ship_name}!"
+                border_style = "bright_red"
+            else:
+                message = f"[bold green]🎯 HIT![/bold green] {player_name} hit {target_player}'s {ship_name} at ({row}, {col})"
+                border_style = "bright_yellow"
         else:
             message = f"[bold red]❌ MISS![/bold red] {player_name} missed at ({row}, {col})"
+            border_style = "red"
             
         panel = Panel(
             Align.center(message),
-            border_style="bright_yellow" if hit else "red",
+            border_style=border_style,
             padding=(0, 2)
         )
         self.console.print(panel)

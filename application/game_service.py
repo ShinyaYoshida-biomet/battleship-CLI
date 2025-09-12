@@ -250,15 +250,24 @@ class GameService:
             
             hit = target_symbol in self.game_state.ships_config.keys()
             
-            # Check for winner
-            self.game_engine.players[opponent_name].get_left_ships()
-            left_ships = self.game_engine.players[opponent_name].left_ships
-            winner = fire_action.player_name if len(left_ships) == 0 else None
+            # Check if ship is destroyed
+            ship_destroyed = False
+            if hit:
+                opponent_board = self.game_engine.players[opponent_name].placement_board.board
+                all_cells = opponent_board.values.flatten().tolist()
+                remaining_cells_of_hit_ship = sum(1 for cell in all_cells if cell == target_symbol)
+                ship_destroyed = remaining_cells_of_hit_ship == 0
+            
+            # Check for winner - check if all ships are destroyed
+            opponent_board = self.game_engine.players[opponent_name].placement_board.board
+            all_cells = opponent_board.values.flatten().tolist()
+            remaining_ships = [cell for cell in all_cells if cell in self.game_state.ships_config.keys()]
+            winner = fire_action.player_name if len(remaining_ships) == 0 else None
             
             return FireResult(
                 hit=hit,
                 ship_symbol=target_symbol if hit else None,
-                ship_destroyed=False,  # Could be enhanced
+                ship_destroyed=ship_destroyed,
                 winner=winner
             )
             
