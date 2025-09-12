@@ -32,7 +32,7 @@ class Config:
             self.ship_dict = self.get_ship_info()
         else:
             # CLI-based configuration
-            board_size = kwargs.get('board_size', (10, 10))
+            board_size = kwargs.get('board_size', (7, 7))
             self.row_num = board_size[0]
             self.column_num = board_size[1]
             

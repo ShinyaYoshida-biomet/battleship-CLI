@@ -254,21 +254,28 @@ class BattleshipUI:
                 self.console.print("[red]❌ Please enter valid numbers[/red]")
                 
     def prompt_fire_location(self, player_name: str, board_size: tuple) -> tuple:
-        """Prompt for firing location."""
+        """Prompt for firing location using single command format."""
         max_row, max_col = board_size[0] - 1, board_size[1] - 1
         
         self.console.print(f"\n[bold red]🎯 {player_name}, time to fire![/bold red]")
+        self.console.print(f"   Command format: [yellow]v row column[/yellow] (e.g., 'v 3 7')")
         self.console.print(f"   Valid coordinates: [dim]0-{max_row} for rows, 0-{max_col} for columns[/dim]")
         
         while True:
-            location_str = Prompt.ask("Target coordinates (row column)")
+            command_str = Prompt.ask("Fire command")
             try:
-                parts = location_str.strip().split()
-                if len(parts) != 2:
-                    self.console.print("[red]❌ Please enter two numbers separated by space[/red]")
+                parts = command_str.strip().split()
+                if len(parts) != 3:
+                    self.console.print("[red]❌ Please use format: v row column (e.g., 'v 3 7')[/red]")
+                    continue
+                
+                command, row_str, col_str = parts[0], parts[1], parts[2]
+                
+                if command.lower() != 'v':
+                    self.console.print("[red]❌ Command must start with 'v' (e.g., 'v 3 7')[/red]")
                     continue
                     
-                row, col = int(parts[0]), int(parts[1])
+                row, col = int(row_str), int(col_str)
                 
                 if not (0 <= row <= max_row and 0 <= col <= max_col):
                     self.console.print(f"[red]❌ Coordinates out of bounds! Valid range: 0-{max_row}, 0-{max_col}[/red]")
@@ -277,7 +284,7 @@ class BattleshipUI:
                 return row, col
                 
             except ValueError:
-                self.console.print("[red]❌ Please enter valid numbers[/red]")
+                self.console.print("[red]❌ Please enter valid numbers (e.g., 'v 3 7')[/red]")
                 
     def show_fire_result(self, player_name: str, target_player: str, row: int, col: int, 
                         hit: bool, ship_symbol: str = None):

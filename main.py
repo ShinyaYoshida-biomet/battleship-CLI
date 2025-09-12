@@ -28,7 +28,7 @@ def parse_arguments():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  %(prog)s                              # Default 10x10 board, standard ships, prompt for mode
+  %(prog)s                              # Default 7x7 board, standard ships, prompt for mode
   %(prog)s --mode pvp                   # Player vs Player mode
   %(prog)s --mode pvc                   # Player vs Computer mode
   %(prog)s --board-size 8 8             # Custom 8x8 board
@@ -56,8 +56,8 @@ Ship Types (default):
         nargs=2,
         type=int,
         metavar=('ROWS', 'COLS'),
-        default=(10, 10),
-        help='Board dimensions (default: 10 10)'
+        default=(7, 7),
+        help='Board dimensions (default: 7 7)'
     )
     
     # Ship configuration
@@ -260,7 +260,7 @@ def main():
         # clear console for good appearance
         if game.is_human_player(player):
             ui.console.print("\n[green]Ship placement complete! Get ready for battle...[/green]")
-            ui.pause_for_input("Press Enter to start battle...")
+            time.sleep(2)  # Automatic pause instead of manual input
             ui.clear_screen()
         else:
             ui.console.print(f"[blue]{player} has finished placing ships![/blue]")
@@ -300,9 +300,9 @@ def main():
                 finish_flag = True
                 break
 
-            # Show result to human player if it was computer's turn
+            # Show result to human player if it was computer's turn  
             if not game.is_human_player(player) and game.is_human_player(opponent_player):
-                ui.pause_for_input("Press Enter to continue...")
+                time.sleep(2)  # Automatic pause instead of manual input
             
             # Appropriate pause based on player type
             if game.is_human_player(player):
