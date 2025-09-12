@@ -15,7 +15,6 @@ from ports.game_ports import GameInputPort, GameOutputPort, AIPort
 # Import existing infrastructure
 from config import Config
 from game import Game
-from computer_ai import ComputerAI
 
 
 class GameService:
@@ -27,7 +26,7 @@ class GameService:
     def __init__(self, 
                  input_port: GameInputPort,
                  output_port: GameOutputPort, 
-                 ai_port: Optional[AIPort] = None):
+                 ai_port: AIPort):
         self.input_port = input_port
         self.output_port = output_port
         self.ai_port = ai_port
@@ -104,17 +103,13 @@ class GameService:
                     placement = await self.input_port.get_ship_placement(context)
                 else:
                     # Get placement from AI
-                    if self.ai_port:
-                        context = PlacementContext(
-                            player_name=player_name,
-                            ship=ship,
-                            board_size=self.game_state.board_size,
-                            current_board_state=placement_board
-                        )
-                        placement = await self.ai_port.get_ship_placement_decision(context)
-                    else:
-                        # Fallback to existing AI logic
-                        placement = await self._get_ai_ship_placement(player_name, ship)
+                    context = PlacementContext(
+                        player_name=player_name,
+                        ship=ship,
+                        board_size=self.game_state.board_size,
+                        current_board_state=placement_board
+                    )
+                    placement = await self.ai_port.get_ship_placement_decision(context)
                 
                 # Execute placement using existing game engine
                 result = await self._execute_ship_placement(placement)
@@ -155,16 +150,12 @@ class GameService:
                 fire_action = await self.input_port.get_fire_action(context)
             else:
                 # AI fire action
-                if self.ai_port:
-                    context = FireContext(
-                        player_name=current_player_info.name,
-                        board_size=self.game_state.board_size,
-                        firing_board_state=firing_board
-                    )
-                    fire_action = await self.ai_port.get_fire_decision(context)
-                else:
-                    # Fallback to existing AI
-                    fire_action = await self._get_ai_fire_action(current_player_info.name)
+                context = FireContext(
+                    player_name=current_player_info.name,
+                    board_size=self.game_state.board_size,
+                    firing_board_state=firing_board
+                )
+                fire_action = await self.ai_port.get_fire_decision(context)
             
             # Execute fire action
             fire_result = await self._execute_fire_action(fire_action)
@@ -273,58 +264,3 @@ class GameService:
             
         except Exception as e:
             return FireResult(False, None, False, None)
-    
-    async def _get_ai_ship_placement(self, player_name: str, ship: Ship) -> ShipPlacement:
-        """Get AI ship placement using existing AI logic."""
-        # Reuse existing computer AI
-        occupied = self._get_occupied_positions(player_name)
-        ai_orientation, ai_x, ai_y = self.game_engine.computer_ai[player_name].get_ship_placement(
-            ship.size, occupied
-        )
-        
-        return ShipPlacement(
-            player_name=player_name,
-            ship=ship,
-            orientation=ai_orientation,
-            start_position=Position(ai_x, ai_y)
-        )
-    
-    async def _get_ai_fire_action(self, player_name: str) -> FireAction:
-        """Get AI fire action using existing AI logic."""
-        firing_board_data = self._get_board_data(player_name, 'firing')
-        ai_x, ai_y = self.game_engine.computer_ai[player_name].get_fire_location(
-            firing_board_data,
-            self.game_engine.computer_shots[player_name]
-        )
-        
-        return FireAction(
-            player_name=player_name,
-            target_position=Position(ai_x, ai_y)
-        )
-    
-    def _get_occupied_positions(self, player_name: str) -> List[Tuple[int, int]]:
-        """Get occupied positions from existing game engine."""
-        occupied = []
-        board = self.game_engine.players[player_name].placement_board.board
-        
-        for x in range(board.shape[0]):
-            for y in range(board.shape[1]):
-                if board.iloc[x, y] != '*':
-                    occupied.append((x, y))
-        return occupied
-    
-    def _get_board_data(self, player_name: str, board_type: str) -> List[List[str]]:
-        """Get board data from existing game engine."""
-        if board_type == 'firing':
-            board = self.game_engine.players[player_name].firing_board.board
-        else:
-            board = self.game_engine.players[player_name].placement_board.board
-            
-        board_data = []
-        for x in range(board.shape[0]):
-            row = []
-            for y in range(board.shape[1]):
-                row.append(board.iloc[x, y])
-            board_data.append(row)
-            
-        return board_data

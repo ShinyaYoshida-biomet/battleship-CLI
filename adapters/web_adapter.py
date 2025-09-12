@@ -5,7 +5,6 @@ Implements Hexagonal Architecture ports for Web interface.
 """
 
 from typing import Tuple, Optional
-from abc import abstractmethod
 from domain.models import (
     GameState, ShipPlacement, FireAction, Ship, Position,
     PlacementContext, FireContext, GameResult, FireResult
