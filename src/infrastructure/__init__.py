@@ -1,0 +1,1 @@
+"""Infrastructure layer for battleship game."""

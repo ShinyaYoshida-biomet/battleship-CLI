@@ -1,19 +1,300 @@
-# -*- coding: utf-8 -*-
-"""Main module to execute battleship game in CLI.
-You can start the game by typing a command below in your command line.
+"""Main module for Battleship CLI with hexagonal architecture.
 
-Example:
-    python main.py
-    
+This module sets up the dependency injection and orchestrates the game flow
+using the new hexagonal architecture.
 """
 import argparse
 import sys
-import time
+import random
 from typing import Dict, Tuple
 
 from config import Config
-from game import Game
-from ui import ui
+
+# Domain imports
+from src.domain.entities.player import PlayerType
+from src.domain.entities.game_state import GamePhase
+from src.domain.value_objects.position import Position
+from src.domain.value_objects.ship_placement import ShipPlacement, Orientation
+
+# Application imports
+from src.application.services.game_service import GameService
+from src.application.use_cases.create_game_use_case import CreateGameUseCase, CreateGameRequest
+from src.application.use_cases.place_ship_use_case import PlaceShipUseCase, PlaceShipRequest
+
+# Infrastructure imports
+from src.infrastructure.adapters.cli_ui_adapter import CLIUIAdapter
+from src.infrastructure.adapters.in_memory_game_repository import InMemoryGameRepository
+from src.infrastructure.adapters.console_notification_service import ConsoleNotificationService
+from src.infrastructure.adapters.computer_ai_adapter import ComputerAIAdapter
+
+
+class BattleshipGameOrchestrator:
+    """Orchestrates the Battleship game using hexagonal architecture."""
+    
+    def __init__(self):
+        # Infrastructure adapters
+        self.ui = CLIUIAdapter()
+        self.repository = InMemoryGameRepository()
+        self.notifier = ConsoleNotificationService()
+        
+        # Application services
+        self.game_service = GameService(self.repository, self.notifier)
+        
+        # Use cases
+        self.create_game_use_case = CreateGameUseCase(self.repository, self.notifier)
+        self.place_ship_use_case = PlaceShipUseCase(self.repository, self.notifier)
+        
+        # AI adapters (will be created per game)
+        self.ai_adapters = {}
+    
+    def run_game(self, config: Config, mode: str, player1_name: str = None, player2_name: str = None):
+        """Run the complete game flow."""
+        try:
+            # Show welcome screen
+            self.ui.display_welcome_screen()
+            
+            # Determine game mode
+            if mode == 'prompt':
+                game_mode = self.ui.prompt_game_mode()
+            else:
+                game_mode = mode
+            
+            # Get player names
+            if player1_name and (game_mode == 'pvc' or player2_name):
+                if game_mode == 'pvc':
+                    names = (player1_name, "Computer")
+                else:
+                    names = (player1_name, player2_name)
+            else:
+                names = self.ui.prompt_player_names(game_mode)
+            
+            player1_name, player2_name = names
+            
+            # Determine player types
+            if game_mode == 'pvp':
+                player_types = (PlayerType.HUMAN, PlayerType.HUMAN)
+            else:
+                player_types = (PlayerType.HUMAN, PlayerType.COMPUTER)
+            
+            # Show configuration
+            self.ui.display_game_config((config.row_num, config.column_num), config.ship_dict)
+            
+            # Create game
+            create_request = CreateGameRequest(
+                player1_name=player1_name,
+                player1_type=player_types[0],
+                player2_name=player2_name,  
+                player2_type=player_types[1],
+                board_size=(config.row_num, config.column_num)
+            )
+            
+            game_state = self.create_game_use_case.execute(create_request)
+            
+            # Initialize AI if needed
+            for player in game_state.players:
+                if player.is_computer():
+                    self.ai_adapters[player.name] = ComputerAIAdapter(config.row_num, config.column_num)
+            
+            # Advance to ship placement phase
+            game_state.advance_phase()
+            
+            # Ship placement phase
+            self._ship_placement_phase(game_state, config.ship_dict)
+            
+            # Advance to battle phase
+            game_state.advance_phase()
+            
+            # Battle phase
+            self._battle_phase(game_state)
+            
+        except KeyboardInterrupt:
+            self.ui.display_info("Game interrupted by user. Thanks for playing!")
+            sys.exit(0)
+        except Exception as e:
+            self.ui.display_error(f"Game error: {e}")
+            sys.exit(1)
+    
+    def _ship_placement_phase(self, game_state, ships_config: Dict[str, int]):
+        """Handle ship placement for all players."""
+        for player in game_state.players:
+            self.ui.display_info(f"\\n=== {player.name}'s Ship Placement ===")
+            
+            if player.is_computer():
+                # Computer placement
+                self._place_computer_ships(game_state, player, ships_config)
+            else:
+                # Human placement
+                placement_mode = self.ui.prompt_ship_placement_mode(player.name)
+                if placement_mode == 'random':
+                    self._place_random_ships(game_state, player, ships_config)
+                else:
+                    self._place_manual_ships(game_state, player, ships_config)
+            
+            self.ui.display_info(f"{player.name} has finished placing ships!")
+    
+    def _place_manual_ships(self, game_state, player, ships_config: Dict[str, int]):
+        """Handle manual ship placement for human players."""
+        ship_names = {
+            'C': 'Carrier', 'B': 'Battleship', 'D': 'Destroyer',
+            'S': 'Submarine', 'P': 'Patrol boat'
+        }
+        
+        for ship_symbol, ship_size in ships_config.items():
+            ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+            
+            while True:
+                try:
+                    # Show current board
+                    self.ui.display_placement_board(player)
+                    
+                    # Get placement from user
+                    placement = self.ui.prompt_ship_placement(
+                        player.name, ship_symbol, ship_size,
+                        (player.placement_board.rows, player.placement_board.cols)
+                    )
+                    
+                    # Try to place the ship
+                    request = PlaceShipRequest(player, ship_symbol, ship_name, ship_size, placement)
+                    self.place_ship_use_case.execute(game_state, request)
+                    
+                    self.ui.display_info(f"✅ {ship_name} placed successfully!")
+                    break
+                    
+                except Exception as e:
+                    self.ui.display_error(f"Cannot place {ship_name}: {e}")
+                    continue
+    
+    def _place_random_ships(self, game_state, player, ships_config: Dict[str, int]):
+        """Handle random ship placement."""
+        ship_names = {
+            'C': 'Carrier', 'B': 'Battleship', 'D': 'Destroyer',
+            'S': 'Submarine', 'P': 'Patrol boat'
+        }
+        
+        for ship_symbol, ship_size in ships_config.items():
+            ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+            
+            # Use AI adapter for random placement
+            ai = ComputerAIAdapter(player.placement_board.rows, player.placement_board.cols)
+            occupied_positions = self._get_occupied_positions(player)
+            
+            placement = ai.get_ship_placement(ship_size, player.placement_board, occupied_positions)
+            
+            request = PlaceShipRequest(player, ship_symbol, ship_name, ship_size, placement)
+            self.place_ship_use_case.execute(game_state, request)
+            
+            self.ui.display_info(f"🎲 {ship_name} randomly placed")
+    
+    def _place_computer_ships(self, game_state, player, ships_config: Dict[str, int]):
+        """Handle computer ship placement."""
+        ship_names = {
+            'C': 'Carrier', 'B': 'Battleship', 'D': 'Destroyer',
+            'S': 'Submarine', 'P': 'Patrol boat'
+        }
+        
+        ai = self.ai_adapters[player.name]
+        
+        for ship_symbol, ship_size in ships_config.items():
+            ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+            
+            occupied_positions = self._get_occupied_positions(player)
+            placement = ai.get_ship_placement(ship_size, player.placement_board, occupied_positions)
+            
+            request = PlaceShipRequest(player, ship_symbol, ship_name, ship_size, placement)
+            self.place_ship_use_case.execute(game_state, request)
+    
+    def _get_occupied_positions(self, player):
+        """Get list of occupied positions on player's board."""
+        occupied = []
+        for row in range(player.placement_board.rows):
+            for col in range(player.placement_board.cols):
+                pos = Position(row, col)
+                if player.placement_board.get_ship_at_position(pos):
+                    occupied.append(pos)
+        return occupied
+    
+    def _battle_phase(self, game_state):
+        """Handle the main battle phase."""
+        turn_counter = 0
+        
+        while not game_state.is_game_over():
+            current_player = game_state.current_player
+            opponent = game_state.get_opponent(current_player)
+            turn_counter += 1
+            
+            # Show turn header
+            self.ui.display_turn_header(current_player.name, turn_counter)
+            
+            # Show boards for human players
+            if not current_player.is_computer():
+                self.ui.display_boards_side_by_side(current_player, opponent)
+            
+            # Get fire location
+            if current_player.is_computer():
+                fire_pos = self._get_computer_fire_location(current_player, opponent)
+            else:
+                fire_pos = self._get_human_fire_location(current_player)
+            
+            # Fire the shot
+            result = self.game_service.fire_shot(game_state, current_player, fire_pos)
+            
+            # Show fire result
+            hit_ship = None
+            if result.value == "hit":
+                hit_ship = opponent.placement_board.get_ship_at_position(fire_pos)
+            
+            self.ui.display_fire_result(
+                current_player.name, opponent.name, fire_pos, result,
+                hit_ship.symbol if hit_ship else None
+            )
+            
+            # Check for sunk ship
+            if hit_ship and hit_ship.is_sunk():
+                self.ui.display_ship_sunk(opponent.name, hit_ship)
+            
+            # Check win condition
+            winner = self.game_service.check_game_over(game_state)
+            if winner:
+                self.ui.display_game_winner(winner, not winner.is_computer())
+                break
+            
+            # Show updated boards after shot
+            if not current_player.is_computer():
+                import time
+                time.sleep(1)
+                self.ui.display_boards_side_by_side(current_player, opponent)
+                time.sleep(2)
+                self.ui.clear_screen()
+            
+            # Advance turn
+            self.game_service.advance_turn(game_state)
+    
+    def _get_human_fire_location(self, player):
+        """Get fire location from human player."""
+        board_size = (player.firing_board.rows, player.firing_board.cols)
+        
+        while True:
+            position = self.ui.prompt_fire_location(player.name, board_size)
+            
+            if player.can_fire_at_position(position):
+                return position
+            else:
+                self.ui.display_error(f"Already fired at ({position.row}, {position.col}). Choose different coordinates.")
+    
+    def _get_computer_fire_location(self, player, opponent):
+        """Get fire location from computer AI."""
+        ai = self.ai_adapters[player.name]
+        
+        # Create firing history for AI
+        firing_history = []
+        for row in range(player.firing_board.rows):
+            for col in range(player.firing_board.cols):
+                pos = Position(row, col)
+                cell_state = player.firing_board.get_cell_state(pos)
+                if cell_state.value in ['hit', 'miss']:
+                    firing_history.append((pos, cell_state.value))
+        
+        return ai.get_fire_location(opponent.placement_board, firing_history)
 
 
 def get_version():
@@ -26,18 +307,14 @@ def get_version():
 
 
 def parse_arguments():
-    """Parse command line arguments for battleship game configuration.
-    
-    Returns:
-        argparse.Namespace: Parsed arguments.
-    """
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Battleship CLI Game',
+        description='Battleship CLI Game with Hexagonal Architecture',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
   %(prog)s                              # Default 7x7 board, standard ships, prompt for mode
-  %(prog)s --mode pvp                   # Player vs Player mode
+  %(prog)s --mode pvp                   # Player vs Player mode  
   %(prog)s --mode pvc                   # Player vs Computer mode
   %(prog)s --board-size 8 8             # Custom 8x8 board
   %(prog)s --ships C:5 B:4 D:3          # Custom ships (Carrier:5, Battleship:4, Destroyer:3)
@@ -45,7 +322,7 @@ Examples:
 
 Ship Types (default):
   B - Battleship (4 cells)
-  D - Destroyer (3 cells)
+  D - Destroyer (3 cells) 
   P - Patrol boat (2 cells)
         '''
     )
@@ -106,15 +383,9 @@ Ship Types (default):
     
     return parser.parse_args()
 
+
 def parse_ships(ships_list) -> Dict[str, int]:
-    """Parse ships from command line format.
-    
-    Args:
-        ships_list: List of strings in format 'NAME:SIZE'
-        
-    Returns:
-        Dict[str, int]: Ship name to size mapping
-    """
+    """Parse ships from command line format."""
     if not ships_list:
         # Default ships - simplified for faster gameplay
         return {
@@ -138,16 +409,9 @@ def parse_ships(ships_list) -> Dict[str, int]:
     
     return ships_dict
 
+
 def validate_configuration(board_size: Tuple[int, int], ships_dict: Dict[str, int]) -> None:
-    """Validate game configuration parameters.
-    
-    Args:
-        board_size: Tuple of (rows, cols)
-        ships_dict: Dictionary of ship names to sizes
-        
-    Raises:
-        SystemExit: If configuration is invalid
-    """
+    """Validate game configuration parameters."""
     rows, cols = board_size
     
     # Validate board size
@@ -185,33 +449,20 @@ def validate_configuration(board_size: Tuple[int, int], ships_dict: Dict[str, in
 
 
 def main():
-    """Main module to execute battleship game in CLI.
-
-    Uses command line arguments for configuration or prompts user for missing information.
-    """
+    """Main entry point for Battleship CLI."""
     try:
         args = parse_arguments()
-        
-        # Show welcome screen with Rich UI
-        ui.show_welcome_screen()
-            
-        # Determine game mode
-        if args.mode == 'prompt':
-            game_mode = ui.prompt_game_mode()
-        else:
-            game_mode = args.mode
         
         # Initialize configuration
         if args.config:
             # Use legacy config file
-            ui.console.print(f"\n[blue]Using configuration file: {args.config}[/blue]")
             try:
                 config = Config(args.config)
             except FileNotFoundError:
-                ui.console.print(f"[red]Error: Configuration file '{args.config}' not found.[/red]")
+                print(f"Error: Configuration file '{args.config}' not found.")
                 sys.exit(1)
             except Exception as e:
-                ui.console.print(f"[red]Error reading configuration file: {e}[/red]")
+                print(f"Error reading configuration file: {e}")
                 sys.exit(1)
         else:
             # Use CLI configuration
@@ -221,125 +472,18 @@ def main():
             # Validate configuration
             validate_configuration(board_size, ships_dict)
             
-            # Show configuration with Rich UI
-            ui.show_game_config(board_size, ships_dict)
-            
             config = Config(config_path=None, board_size=board_size, ships=ships_dict)
         
-        # Determine player names and types
-        if game_mode == 'pvp':
-            # Player vs Player mode
-            if args.player1 and args.player2:
-                player1_name, player2_name = args.player1, args.player2
-            else:
-                player1_name, player2_name = ui.prompt_player_names('pvp')
-            player_names = [player1_name, player2_name]
-            player_types = ['human', 'human']
-        else:
-            # Player vs Computer mode
-            if args.player1:
-                player1_name, player2_name = args.player1, 'Computer'
-            else:
-                player1_name, player2_name = ui.prompt_player_names('pvc')
-            player_names = [player1_name, player2_name]
-            player_types = ['human', 'computer']
+        # Create and run game
+        orchestrator = BattleshipGameOrchestrator()
+        orchestrator.run_game(config, args.mode, args.player1, args.player2)
         
-        # Announce the matchup with Rich UI
-        ui.announce_vs(player1_name, player2_name)
-
-        # Initialize game instance with config and player information
-        game = Game(config, player_names, player_types)
-        
-        # Display game rules with Rich UI
-        ui.show_game_rules(game.config.ship_dict)
-        
-        game.set_players()
-        
-        # Ask human players for ship placement mode
-        game.set_ship_placement_modes()
-
-        # Player1 and Player2 initialize their battleship locations
-        for player in player_names:
-            # Only show board to human players
-            if game.is_human_player(player):
-                ui.console.print(f"\n[bold blue]=== {player}'s Ship Placement ===[/bold blue]")
-                game.display_placement_board(player)
-            else:
-                ui.console.print(f"\n[bold green]=== {player} is placing ships ===[/bold green]")
-                
-            # Initialize battleship location
-            for ship_symbol, ship_size in game.config.ship_dict.items():
-                # set a battleship based on the information
-                game.set_ships(player, ship_symbol, ship_size)
-
-                # Only show updated board to human players
-                if game.is_human_player(player):
-                    game.display_placement_board(player)
-
-            # clear console for good appearance
-            if game.is_human_player(player):
-                ui.console.print("\n[green]Ship placement complete! Get ready for battle...[/green]")
-                time.sleep(0.5)  # Brief pause
-                ui.clear_screen()
-            else:
-                ui.console.print(f"[blue]{player} has finished placing ships![/blue]")
-                time.sleep(0.3)
-
-        # Fire part - main game loop
-        finish_flag = False
-        turn_counter = 0
-        
-        while not finish_flag:
-            for player in player_names:
-                turn_counter += 1
-                
-                # Show turn header with Rich UI
-                ui.show_turn_header(player, turn_counter)
-                
-                # Show boards to human players during their turn
-                if game.is_human_player(player):
-                    game.display_boards_side_by_side(player)
-                else:
-                    ui.console.print(f"\n[bold blue]{player} is analyzing the battlefield...[/bold blue]")
-
-                # get fire location (human input or AI decision)
-                game.get_fire_location(player)
-                opponent_player = [k for k in player_names if k != player][0]
-                
-                # Fire!
-                game.fire(player, opponent_player)
-
-                # Update ship status for both players
-                game.players[opponent_player].get_left_ships()
-                left_ships = game.players[opponent_player].left_ships
-
-                # Show updated board to human player after their shot
-                if game.is_human_player(player):
-                    time.sleep(1)  # Brief pause to see the result
-                    game.display_boards_side_by_side(player)
-
-                # When there are no left ships game is end.
-                if len(left_ships) == 0:
-                    ui.show_game_winner(player, game.is_human_player(player))
-                    finish_flag = True
-                    break
-
-                # Show result to human player if it was computer's turn  
-                if not game.is_human_player(player) and game.is_human_player(opponent_player):
-                    time.sleep(0.5)  # Brief pause
-                
-                # Appropriate pause based on player type
-                if game.is_human_player(player):
-                    time.sleep(2)  # Give time to see updated board
-                    ui.clear_screen()
-                else:
-                    time.sleep(2)
-                    
     except KeyboardInterrupt:
-        # Handle Ctrl+C gracefully
-        ui.console.print("\n\n[bold red]🛑 Game interrupted by user[/bold red]")
-        ui.console.print("[yellow]Thanks for playing Battleship CLI! 👋[/yellow]")
+        print("\\n\\nGame interrupted by user. Thanks for playing! 👋")
         sys.exit(0)
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
