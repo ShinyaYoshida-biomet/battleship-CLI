@@ -17,6 +17,15 @@ from game import Game
 from ui import ui
 
 
+def get_version():
+    """Get version from VERSION file."""
+    try:
+        with open('VERSION', 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return '1.0.0'
+
+
 def parse_arguments():
     """Parse command line arguments for battleship game configuration.
     
@@ -40,6 +49,13 @@ Ship Types (default):
   D - Destroyer (3 cells)
   P - Patrol boat (2 cells)
         '''
+    )
+    
+    # Version information
+    parser.add_argument(
+        '--version', '-v',
+        action='version',
+        version=f'Battleship CLI {get_version()}'
     )
     
     # Game mode selection

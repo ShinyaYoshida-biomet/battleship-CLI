@@ -23,10 +23,20 @@ Battleship is a classic strategy game where players place ships on a grid and ta
 
 ### Step 1: Installation
 
-First, download the game and install the required libraries:
+**🚀 Easy Install (Recommended)** - No Python required:
 
 ```bash
-# Clone the repository (download)
+# One-liner installation for macOS/Linux
+curl -sSL https://raw.githubusercontent.com/ShinyaYoshida-biomet/battleship-CLI/main/install.sh | bash
+
+# Or download binary manually from GitHub Releases
+# https://github.com/ShinyaYoshida-biomet/battleship-CLI/releases
+```
+
+**🐍 From Source** (for developers):
+
+```bash
+# Clone the repository
 git clone https://github.com/ShinyaYoshida-biomet/battleship-CLI.git
 cd battleship-CLI
 
@@ -34,25 +44,30 @@ cd battleship-CLI
 pip install -r requirements.txt
 ```
 
-💡 **Need help?**: If Python isn't installed, download it from the [official Python website](https://www.python.org/downloads/).
+💡 **Need help?**: 
+- For binary install: No Python needed! Just download and run
+- For source install: Get Python from [official website](https://www.python.org/downloads/)
 
 ### Step 2: Starting the Game
 
-**For beginners** (easiest way):
+**If you installed via binary**:
+
+```bash
+# Super simple! Follow the prompts to set up your game
+battleship
+
+# Or with direct setup
+battleship --mode pvc --player1 YourName
+```
+
+**If you're running from source**:
 
 ```bash
 # Super simple! Follow the prompts to set up your game
 python main.py
-```
 
-**For experienced players** (direct setup):
-
-```bash
-# Play against computer (enter your name)
+# Or with direct setup  
 python main.py --mode pvc --player1 YourName
-
-# Play against a friend
-python main.py --mode pvp --player1 Player1 --player2 Player2
 ```
 
 ### Step 3: Game Flow
