@@ -18,6 +18,7 @@ from board import Board
 from config import Config
 from player import Player
 from computer_ai import ComputerAI
+from ui import ui
 
 
 class Game:
@@ -221,49 +222,28 @@ class Game:
         ship_symbol: str,
         ship_size: str
     ) -> None:
-        """Function to set orientation obtained from CLI
+        """Function to set orientation obtained from CLI using Rich UI
 
         Args: 
             player_name (str): Name of turn player.
             ship_symbol (str): The name(symbol) of a ship to set.
             ship_size (int): The length of a ship to set.
         """
-        # Create clear, user-friendly message
-        ship_names = {
-            'C': 'Carrier',
-            'B': 'Battleship', 
-            'D': 'Destroyer',
-            'S': 'Submarine',
-            'P': 'Patrol boat'
-        }
+        # Use Rich UI for ship orientation prompt
+        orient = ui.prompt_ship_orientation(player_name, ship_symbol, int(ship_size))
         
-        ship_display = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
-        
-        print(f"\n🚢 {player_name}, placing your {ship_display}")
-        print(f"   Size: {ship_size} cells")
-        print("   Choose orientation:")
-        print("   H = Horizontal (→→→)")
-        print("   V = Vertical   (↓)")
-        print("                  (↓)")
-        print("                  (↓)")
-        
-        orient = ''
-        # if orient expression was wrong, let user input it again.
-        while orient not in self.h_symbols + self.v_symbols:
-            orient = input(f"Enter orientation [H=Horizontal/V=Vertical]: ").rstrip().lstrip().lower()
-            if orient not in self.h_symbols + self.v_symbols:
-                print("❌ Please enter 'H' for Horizontal or 'V' for Vertical")
-        
-        direction_text = "Horizontally" if orient in self.h_symbols else "Vertically"
-        print(f"✅ Placing {direction_text}!")
-        self.orient = orient
+        # Convert to format expected by game logic
+        if orient.lower() in ['h', 'horizontal']:
+            self.orient = 'h'
+        else:
+            self.orient = 'v'
 
     def get_location(
         self,
         ship_symbol: str,
         ship_size: int
     ) -> None:
-        """Function to set location obtained from CLI
+        """Function to set location obtained from CLI using Rich UI
 
         Args: 
             ship_symbol (str): The name(symbol) of a ship to set.
@@ -277,34 +257,14 @@ class Game:
             'P': 'Patrol boat'
         }
         
-        ship_display = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+        ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+        board_size = (self.config.row_num, self.config.column_num)
         
-        print(f"\n📍 Where do you want to place your {ship_display}?")
-        print(f"   This ship is {ship_size} cells long")
-        print("   Enter the starting position as: row column")
-        print("   Example: '2 5' means row 2, column 5")
-        print("   (Remember: coordinates start from 0)")
+        # Use Rich UI for location prompt
+        row, col = ui.prompt_ship_location(ship_name, ship_size, board_size)
         
-        obtained = False
-        while not obtained:
-            location = input("Starting position (row column): ").rstrip().lstrip()
-            # 2 numbers should be contained in the variable location
-            numbers = re.findall('[0-9]+', location)
-            if len(numbers) >= 2:
-                row, col = int(numbers[0]), int(numbers[1])
-                # Check if coordinates are within bounds
-                if (0 <= row < self.config.row_num and 
-                    0 <= col < self.config.column_num):
-                    obtained = True
-                    print(f"✅ Starting at row {row}, column {col}")
-                else:
-                    print(f"❌ Position out of bounds! Board is {self.config.row_num}x{self.config.column_num} (0-{self.config.row_num-1}, 0-{self.config.column_num-1})")
-            else:
-                print("❌ Please enter two numbers separated by space (e.g., '2 5')")
-
-        location = location.split()
-        self.x = int(location[0])
-        self.y = int(location[1])
+        self.x = row
+        self.y = col
 
     def display_placement_board(self, player_name: str) -> None:
         """Function to display placement board
@@ -312,8 +272,9 @@ class Game:
         Args: 
             player_name (str): Name of turn player.
         """
-        print(f"{player_name}\'s placement board:")
-        print(self.players[player_name].placement_board.board)
+        # This method is deprecated - use display_boards_side_by_side instead
+        placement_board = self.players[player_name].placement_board.board
+        ui.create_board_table(placement_board, f"🚢 {player_name}'s Fleet", show_ships=True)
 
     def display_firing_board(self, player_name: str) -> None:
         """Function to display firing board
@@ -321,8 +282,25 @@ class Game:
         Args: 
             player_name (str): Name of turn player.
         """
-        print(f"{player_name}\'s firing board:")
-        print(self.players[player_name].firing_board.board)
+        # This method is deprecated - use display_boards_side_by_side instead
+        firing_board = self.players[player_name].firing_board.board
+        ui.create_board_table(firing_board, f"🎯 {player_name}'s Attack Board", show_ships=False)
+
+    def display_boards_side_by_side(self, player_name: str) -> None:
+        """Display firing and placement boards side by side using Rich UI.
+        
+        Args:
+            player_name (str): Name of the player whose boards to display.
+        """
+        firing_board = self.players[player_name].firing_board.board
+        placement_board = self.players[player_name].placement_board.board
+        
+        # Use the Rich UI to display side-by-side boards
+        ui.display_boards_side_by_side(
+            player_name=player_name,
+            firing_board=firing_board,
+            placement_board=placement_board
+        )
 
     def get_fire_location(self, player_name: str) -> None:
         """Function to get location to fire
@@ -339,53 +317,35 @@ class Game:
             self._get_human_fire_location(player_name)
 
     def _get_human_fire_location(self, player_name: str) -> None:
-        """Get fire location from human player via CLI input.
+        """Get fire location from human player via Rich UI input.
         
         Args:
             player_name (str): Name of turn player.
         """
-        print(f"\n🎯 {player_name}, time to fire!")
-        print("   Enter the coordinates you want to attack")
-        print("   Format: row column (e.g., '3 7' for row 3, column 7)")
-        print("   Coordinates start from 0")
-        print(f"   Valid range: 0-{self.config.row_num-1} for rows, 0-{self.config.column_num-1} for columns")
+        board_size = (self.config.row_num, self.config.column_num)
         
-        obtained = False
-        while not obtained:
-            fire_location = input("Target coordinates (row column): ").rstrip().lstrip()
+        while True:
+            # Use Rich UI for firing location prompt
+            row, col = ui.prompt_fire_location(player_name, board_size)
             
-            # Check if we have exactly 2 numbers
-            numbers = re.findall('[0-9]+', fire_location)
-            if len(numbers) != 2:
-                print("❌ Please enter exactly two numbers separated by space (e.g., '3 7')")
-                continue
-            
-            row, col = int(numbers[0]), int(numbers[1])
-            
-            # Check bounds
-            if not (0 <= row < self.config.row_num and 0 <= col < self.config.column_num):
-                print(f"❌ Coordinates out of bounds! Valid range: 0-{self.config.row_num-1}, 0-{self.config.column_num-1}")
-                continue
-                
             # Check if already fired at this location
             current_cell = self.players[player_name].firing_board.board.iloc[row, col]
             if current_cell != ' ':
-                print(f"❌ You already fired at ({row}, {col})! Choose a different target.")
+                ui.console.print(f"[red]❌ You already fired at ({row}, {col})! Choose a different target.[/red]")
                 continue
                 
-            obtained = True
-            print(f"🎯 Firing at row {row}, column {col}!")
-
-        self.fire_x = row
-        self.fire_y = col
+            self.fire_x = row
+            self.fire_y = col
+            break
 
     def _get_computer_fire_location(self, player_name: str) -> None:
-        """Get fire location from computer AI.
+        """Get fire location from computer AI using Rich UI.
         
         Args:
             player_name (str): Name of turn player.
         """
-        print(f"\n{player_name} is thinking...")
+        # Show computer thinking with Rich UI
+        ui.show_computer_thinking(player_name)
         time.sleep(1)  # Add suspense
         
         # Get current firing board state
@@ -400,7 +360,8 @@ class Game:
         self.fire_x = ai_x
         self.fire_y = ai_y
         
-        print(f"{player_name} fires at ({ai_x}, {ai_y})!")
+        # Show computer action with Rich UI
+        ui.show_computer_action(player_name, "fires", f"at ({ai_x}, {ai_y})")
 
     def _get_board_data(self, player_name: str, board_type: str) -> List[List[str]]:
         """Get board data as 2D list for AI processing.
@@ -439,7 +400,7 @@ class Game:
         return self.player_types[player_index] == 'human'
 
     def fire(self, player_name: str, opponent_player_name: str) -> None:
-        """Function to execute fire action.
+        """Function to execute fire action using Rich UI.
 
         Args: 
             player_name (str): Name of turn player.
@@ -455,12 +416,22 @@ class Game:
         if target_symbol in self.config.ship_dict.keys():
             fired_symbol = 'O'
             result = 'X'  # Hit for AI tracking
-            print(f"{player_name} hit {opponent_player_name}'s {target_symbol}!")
+            hit = True
         # Else if the target symbol is not a symbol of ships
         else:
             fired_symbol = 'X'
             result = 'O'  # Miss for AI tracking
-            print(f"{player_name} missed!")
+            hit = False
+
+        # Show fire result with Rich UI
+        ui.show_fire_result(
+            player_name, 
+            opponent_player_name, 
+            self.fire_x, 
+            self.fire_y, 
+            hit, 
+            target_symbol if hit else None
+        )
 
         # Track computer shots for AI learning
         player_index = self.player_names.index(player_name)

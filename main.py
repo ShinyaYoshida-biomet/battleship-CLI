@@ -9,10 +9,12 @@ Example:
 import argparse
 import os
 import sys
+import time
 from typing import Dict, Tuple
 
 from config import Config
 from game import Game
+from ui import ui
 
 
 def parse_arguments():
@@ -174,38 +176,26 @@ def main():
     """
     args = parse_arguments()
     
-    print("🚢 Battle Ship Game Has Started! 🚢")
-    try:
-        with open('images/ship_ascii', 'r') as f:
-            print(f.read())
-    except FileNotFoundError:
-        print("⚓ Welcome to Battleship! ⚓")
+    # Show welcome screen with Rich UI
+    ui.show_welcome_screen()
         
     # Determine game mode
     if args.mode == 'prompt':
-        print("\nGame Modes:")
-        print("1. Player vs Player")
-        print("2. Player vs Computer")
-        
-        game_mode = ''
-        while game_mode not in ['1', '2']:
-            game_mode = input('Please select game mode (1 or 2): ').strip()
-        
-        game_mode = 'pvp' if game_mode == '1' else 'pvc'
+        game_mode = ui.prompt_game_mode()
     else:
         game_mode = args.mode
     
     # Initialize configuration
     if args.config:
         # Use legacy config file
-        print(f"\nUsing configuration file: {args.config}")
+        ui.console.print(f"\n[blue]Using configuration file: {args.config}[/blue]")
         try:
             config = Config(args.config)
         except FileNotFoundError:
-            print(f"Error: Configuration file '{args.config}' not found.")
+            ui.console.print(f"[red]Error: Configuration file '{args.config}' not found.[/red]")
             sys.exit(1)
         except Exception as e:
-            print(f"Error reading configuration file: {e}")
+            ui.console.print(f"[red]Error reading configuration file: {e}[/red]")
             sys.exit(1)
     else:
         # Use CLI configuration
@@ -215,48 +205,48 @@ def main():
         # Validate configuration
         validate_configuration(board_size, ships_dict)
         
-        print(f"\nGame Configuration:")
-        print(f"Board Size: {board_size[0]} x {board_size[1]}")
-        print(f"Ships: {', '.join([f'{name}({size})' for name, size in ships_dict.items()])}")
+        # Show configuration with Rich UI
+        ui.show_game_config(board_size, ships_dict)
         
         config = Config(config_path=None, board_size=board_size, ships=ships_dict)
     
     # Determine player names and types
     if game_mode == 'pvp':
         # Player vs Player mode
-        player1_name = args.player1 or input('Player 1, please enter your name: ')
-        player2_name = args.player2 or input('Player 2, please enter your name: ')
+        if args.player1 and args.player2:
+            player1_name, player2_name = args.player1, args.player2
+        else:
+            player1_name, player2_name = ui.prompt_player_names('pvp')
         player_names = [player1_name, player2_name]
         player_types = ['human', 'human']
-        print(f"\n{player1_name} vs {player2_name} - Let the battle begin!")
     else:
         # Player vs Computer mode
-        player1_name = args.player1 or input('Player, please enter your name: ')
-        player2_name = 'Computer'
+        if args.player1:
+            player1_name, player2_name = args.player1, 'Computer'
+        else:
+            player1_name, player2_name = ui.prompt_player_names('pvc')
         player_names = [player1_name, player2_name]
         player_types = ['human', 'computer']
-        print(f"\n{player1_name} vs {player2_name} - Good luck!")
+    
+    # Announce the matchup with Rich UI
+    ui.announce_vs(player1_name, player2_name)
 
     # Initialize game instance with config and player information
     game = Game(config, player_names, player_types)
-    # Display game rules
-    print("\n📋 Game Rules:")
-    print(f"Board: {game.config.row_num}x{game.config.column_num}")
-    print("Ships to place:")
-    for ship_name, ship_size in game.config.ship_dict.items():
-        print(f"  {ship_name}: {ship_size} cells")
-    print("\nObjective: Sink all enemy ships by guessing their locations!")
-    print("Legend: 'O' = Hit, 'X' = Miss, Ship symbols = Your ships\n")
+    
+    # Display game rules with Rich UI
+    ui.show_game_rules(game.config.ship_dict)
+    
     game.set_players()
 
     # Player1 and Player2 initialize their battleship locations
     for player in player_names:
         # Only show board to human players
         if game.is_human_player(player):
-            print(f"\n=== {player}'s Ship Placement ===")
+            ui.console.print(f"\n[bold blue]=== {player}'s Ship Placement ===[/bold blue]")
             game.display_placement_board(player)
         else:
-            print(f"\n=== {player} is placing ships ===")
+            ui.console.print(f"\n[bold green]=== {player} is placing ships ===[/bold green]")
             
         # Initialize battleship location
         for ship_symbol, ship_size in game.config.ship_dict.items():
@@ -269,26 +259,30 @@ def main():
 
         # clear console for good appearance
         if game.is_human_player(player):
-            print("\nShip placement complete! Get ready for battle...")
-            os.system('sleep 2')
-            os.system('clear')
+            ui.console.print("\n[green]Ship placement complete! Get ready for battle...[/green]")
+            ui.pause_for_input("Press Enter to start battle...")
+            ui.clear_screen()
         else:
-            print(f"{player} has finished placing ships!")
-            os.system('sleep 1')
+            ui.console.print(f"[blue]{player} has finished placing ships![/blue]")
+            time.sleep(1)
 
-    # Fire part
+    # Fire part - main game loop
     finish_flag = False
+    turn_counter = 0
+    
     while not finish_flag:
         for player in player_names:
+            turn_counter += 1
+            
+            # Show turn header with Rich UI
+            ui.show_turn_header(player, turn_counter)
+            
             # Only show boards to human players during their turn
             if game.is_human_player(player):
-                print(f"\n=== {player}'s Turn ===")
-                print("\nYour Firing Board:")
-                game.display_firing_board(player)
-                print("\nYour Ships:")
-                game.display_placement_board(player)
+                # Use side-by-side board display for humans
+                game.display_boards_side_by_side(player)
             else:
-                print(f"\n=== {player}'s Turn ===")
+                ui.console.print(f"\n[bold blue]{player} is analyzing the battlefield...[/bold blue]")
 
             # get fire location (human input or AI decision)
             game.get_fire_location(player)
@@ -303,25 +297,20 @@ def main():
 
             # When there are no left ships game is end.
             if len(left_ships) == 0:
-                print(f"\n🎉 {player} Won! Game was finished! 🎉")
-                if game.is_human_player(player):
-                    print("Congratulations!")
-                else:
-                    print("The computer beat you this time. Better luck next time!")
+                ui.show_game_winner(player, game.is_human_player(player))
                 finish_flag = True
                 break
 
             # Show result to human player if it was computer's turn
             if not game.is_human_player(player) and game.is_human_player(opponent_player):
-                print("\nPress Enter to continue...")
-                input()
+                ui.pause_for_input("Press Enter to continue...")
             
-            # Appropriate sleep and clear based on player type
+            # Appropriate pause based on player type
             if game.is_human_player(player):
-                os.system('sleep 1.5')
-                os.system('clear')
+                time.sleep(1.5)
+                ui.clear_screen()
             else:
-                os.system('sleep 2')
+                time.sleep(2)
 
 
 if __name__ == '__main__':
