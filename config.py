@@ -36,12 +36,10 @@ class Config:
             self.row_num = board_size[0]
             self.column_num = board_size[1]
             
-            # Default ships if none provided
+            # Default ships if none provided - simplified for faster gameplay
             default_ships = {
-                'C': 5,  # Carrier
                 'B': 4,  # Battleship
                 'D': 3,  # Destroyer
-                'S': 3,  # Submarine
                 'P': 2   # Patrol boat
             }
             self.ship_dict = kwargs.get('ships', default_ships)

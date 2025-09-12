@@ -68,10 +68,12 @@ class Game:
         r = self.config.row_num
         c = self.config.column_num
 
-        # Initialize Player class for all players in `player_names``.
+        # Initialize Player class for all players in `player_names``
         for player_name in self.player_names:
+            placement_board = Board(r, c, 'placement')  # Board for ship placement
+            firing_board = Board(r, c, 'firing')       # Board for attack tracking
             players[player_name] = Player(
-                player_name, Board(r, c), Board(r, c), self.config)
+                player_name, placement_board, firing_board, self.config)
 
         self.players = players
 

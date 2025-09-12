@@ -27,20 +27,26 @@ class Board:
             9  *  *  *  *  *  *  *  *  *  *
     """
 
-    def __init__(self, row_num: int, column_num: int) -> None:
+    def __init__(self, row_num: int, column_num: int, board_type: str = 'placement') -> None:
         """Initialize Board class variables
 
         Args: 
             row_num (int): The number of rows of the board.
             column_num (int): The number of columns of the board.
+            board_type (str): 'placement' for ship placement board, 'firing' for attack board.
         """
-        r = row_num
-        c = column_num
         # Make dataframe of board
+        if board_type == 'placement':
+            # Placement board shows ship positions, initialize with '*' (water)
+            initial_symbol = '*'
+        else:
+            # Firing board shows attack results, initialize with ' ' (unknown)
+            initial_symbol = ' '
+            
         self.board = pd.DataFrame(
-            [['*']*r]*c,
-            index=list(range(0, r)),
-            columns=list(range(0, c)),
+            [[initial_symbol]*column_num for _ in range(row_num)],
+            index=list(range(0, row_num)),
+            columns=list(range(0, column_num)),
         )
 
     def set_ship(

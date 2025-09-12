@@ -34,10 +34,8 @@ Examples:
   %(prog)s --config config_files/battleship_config.txt  # Use config file
 
 Ship Types (default):
-  C - Carrier (5 cells)
   B - Battleship (4 cells)
   D - Destroyer (3 cells)
-  S - Submarine (3 cells)
   P - Patrol boat (2 cells)
         '''
     )
@@ -65,7 +63,7 @@ Ship Types (default):
         '--ships', '-s',
         nargs='*',
         metavar='NAME:SIZE',
-        help='Ships in format NAME:SIZE (e.g., C:5 B:4 D:3). Default: C:5 B:4 D:3 S:3 P:2'
+        help='Ships in format NAME:SIZE (e.g., C:5 B:4 D:3). Default: B:4 D:3 P:2'
     )
     
     # Legacy config file support
@@ -101,12 +99,10 @@ def parse_ships(ships_list) -> Dict[str, int]:
         Dict[str, int]: Ship name to size mapping
     """
     if not ships_list:
-        # Default ships
+        # Default ships - simplified for faster gameplay
         return {
-            'C': 5,  # Carrier
             'B': 4,  # Battleship
-            'D': 3,  # Destroyer
-            'S': 3,  # Submarine
+            'D': 3,  # Destroyer  
             'P': 2   # Patrol boat
         }
     
