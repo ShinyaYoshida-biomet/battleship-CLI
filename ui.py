@@ -140,12 +140,13 @@ class BattleshipUI:
         return table
         
     def display_boards_side_by_side(self, player_name: str, firing_board: pd.DataFrame, 
-                                  placement_board: pd.DataFrame, ships_config: dict = None, opponent_name: str = "Enemy"):
+                                  placement_board: pd.DataFrame, ships_config: dict = None, 
+                                  opponent_name: str = "Enemy", opponent_left_ships: list = None):
         """Display firing and placement boards side by side with ship status."""
         
         firing_table = self.create_board_table(
             firing_board, 
-            f"🎯 Your Attacks on Enemy", 
+            f"🎯 Your Attacks on {opponent_name}", 
             show_ships=False
         )
         
@@ -166,10 +167,26 @@ class BattleshipUI:
             padding=(1, 2)
         ))
         
-        # Show ship status if ships_config is provided
+        # Show ship status panels if ships_config is provided
         if ships_config:
-            ship_status_panel = self.create_ship_status_panel(placement_board, ships_config)
-            self.console.print(ship_status_panel)
+            # Create both status panels
+            own_status_panel = self.create_ship_status_panel(placement_board, ships_config)
+            
+            status_panels = [own_status_panel]
+            
+            # Add opponent status if available
+            if opponent_left_ships is not None:
+                opponent_status_panel = self.create_opponent_status_panel(
+                    opponent_left_ships, ships_config, opponent_name
+                )
+                status_panels.append(opponent_status_panel)
+            
+            # Display status panels side by side
+            if len(status_panels) == 2:
+                status_columns = Columns(status_panels, equal=True, expand=True)
+                self.console.print(status_columns)
+            else:
+                self.console.print(own_status_panel)
 
     def create_ship_status_panel(self, placement_board: pd.DataFrame, ships_config: dict) -> Panel:
         """Create a panel showing current ship status."""
@@ -205,6 +222,32 @@ class BattleshipUI:
             border_style="bright_yellow",
             padding=(0, 1)
         )
+
+    def create_opponent_status_panel(self, opponent_left_ships: list, ships_config: dict, opponent_name: str = "Enemy") -> Panel:
+        """Create a panel showing opponent's ship status based on remaining ships."""
+        ship_names = {
+            'C': 'Carrier', 'B': 'Battleship', 'D': 'Destroyer',
+            'S': 'Submarine', 'P': 'Patrol boat'
+        }
+        
+        status_text = f"[bold]🎯 {opponent_name}'s Fleet:[/bold]\n"
+        
+        for ship_symbol, ship_size in ships_config.items():
+            ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+            
+            if ship_symbol in opponent_left_ships:
+                # Ship is still alive (we don't know how damaged it is from firing board)
+                status_text += f"  [yellow]❓ {ship_name}: UNKNOWN[/yellow]\n"
+            else:
+                # Ship is completely destroyed
+                status_text += f"  [red]💥 {ship_name}: DESTROYED[/red]\n"
+        
+        return Panel(
+            status_text.rstrip(),
+            title=f"📊 Enemy Intel",
+            border_style="bright_red",
+            padding=(0, 1)
+        )
         
     def prompt_game_mode(self) -> str:
         """Prompt user for game mode selection."""
@@ -234,19 +277,40 @@ class BattleshipUI:
 
     def prompt_ship_placement_mode(self, player_name: str) -> str:
         """Prompt user for ship placement mode."""
+        from rich.console import Console
+        from rich.prompt import Prompt
+        from rich import print as rprint
+        import sys
+        
         self.console.print(f"\n[bold yellow]🚢 {player_name}, how would you like to place your ships?[/bold yellow]")
         
-        choices = {
-            "1": ("manual", "🎯 Manual - Place each ship yourself"),
-            "2": ("random", "🎲 Random - Automatically place all ships")
-        }
+        # Simple, reliable approach
+        self.console.print("\n[dim]Choose your option:[/dim]")
+        self.console.print("  [bold green]1[/bold green]. 🎯 Manual - Place each ship yourself")
+        self.console.print("  [bold green]2[/bold green]. 🎲 Random - Automatically place all ships")
+        self.console.print()
         
-        for key, (_, description) in choices.items():
-            self.console.print(f"  {key}. {description}")
-            
         while True:
-            choice = Prompt.ask("Choose placement mode", choices=list(choices.keys()), default="1")
-            return choices[choice][0]
+            try:
+                choice = Prompt.ask(
+                    "[bold cyan]Enter your choice[/bold cyan]", 
+                    choices=["1", "2"], 
+                    default="1",
+                    show_choices=False
+                )
+                
+                if choice == "1":
+                    self.console.print("[green]✓ Manual placement selected![/green]")
+                    return "manual"
+                else:
+                    self.console.print("[green]✓ Random placement selected![/green]")
+                    return "random"
+                    
+            except KeyboardInterrupt:
+                raise
+            except Exception:
+                self.console.print("[red]Invalid choice. Please enter 1 or 2.[/red]")
+                continue
             
     def announce_vs(self, player1: str, player2: str):
         """Announce the matchup."""

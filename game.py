@@ -52,6 +52,9 @@ class Game:
         self.v_symbols = [self.v_symbol[:i+1]
                           for i in range(len(self.v_symbol))]
         
+        # Track ship placement modes for human players
+        self.placement_modes = {}  # player_name -> 'manual' or 'random'
+        
         # Initialize computer AI if needed
         board_size = (config.row_num, config.column_num)
         self.computer_ai = {}
@@ -78,6 +81,20 @@ class Game:
 
         self.players = players
 
+    def set_ship_placement_modes(self) -> None:
+        """Set ship placement mode for each human player."""
+        for i, player_name in enumerate(self.player_names):
+            player_type = self.player_types[i]
+            if player_type == 'human':
+                # Ask human player for placement mode
+                placement_mode = ui.prompt_ship_placement_mode(player_name)
+                self.placement_modes[player_name] = placement_mode
+                
+                if placement_mode == 'random':
+                    ui.console.print(f"[green]🎲 {player_name} chose random placement![/green]")
+                else:
+                    ui.console.print(f"[blue]🎯 {player_name} chose manual placement![/blue]")
+
     def set_ships(
         self,
         player_name: str,
@@ -98,8 +115,12 @@ class Game:
             # Computer ship placement
             self._set_computer_ship(player_name, ship_symbol, ship_size)
         else:
-            # Human ship placement
-            self._set_human_ship(player_name, ship_symbol, ship_size)
+            # Human ship placement - check placement mode
+            placement_mode = self.placement_modes.get(player_name, 'manual')
+            if placement_mode == 'random':
+                self._set_random_ship(player_name, ship_symbol, ship_size)
+            else:
+                self._set_human_ship(player_name, ship_symbol, ship_size)
 
     def _set_human_ship(
         self,
@@ -200,6 +221,63 @@ class Game:
             print(f"Warning: {player_name} ship placement failed, trying again...")
             # Fallback: try again (should be rare with AI logic)
             self._set_computer_ship(player_name, ship_symbol, ship_size)
+
+    
+    def _set_random_ship(
+        self,
+        player_name: str,
+        ship_symbol: str,
+        ship_size: int
+    ) -> None:
+        """Set ship for human player using random placement.
+        
+        Args: 
+            player_name (str): Name of a player to set board.
+            ship_symbol (str): The name(symbol) of a ship to set.
+            ship_size (int): The length of a ship to set.
+        """
+        ship_names = {
+            'C': 'Carrier',
+            'B': 'Battleship', 
+            'D': 'Destroyer',
+            'S': 'Submarine',
+            'P': 'Patrol boat'
+        }
+        
+        ship_display = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+        
+        ui.console.print(f"\n[cyan]🎲 Randomly placing {ship_display}...[/cyan]")
+        
+        # Get occupied positions from current board
+        occupied_positions = self._get_occupied_positions(player_name)
+        
+        # Use the same AI logic as computer for random placement
+        board_size = (self.config.row_num, self.config.column_num)
+        temp_ai = ComputerAI(board_size)
+        ai_orientation, ai_x, ai_y = temp_ai.get_ship_placement(ship_size, occupied_positions)
+        
+        # Convert AI orientation to game format
+        self.orient = ai_orientation
+        self.x = ai_x
+        self.y = ai_y
+        
+        # Place the ship
+        status = self.players[player_name].placement_board.set_ship(
+            self.orient,
+            self.x,
+            self.y,
+            ship_symbol,
+            ship_size,
+            self.h_symbols,
+            self.v_symbols
+        )
+        
+        if status:
+            ui.console.print(f"[green]✨ {ship_display} randomly placed at ({ai_x}, {ai_y}) {ai_orientation}![/green]")
+        else:
+            ui.console.print(f"[red]Warning: Random placement failed, trying again...[/red]")
+            # Fallback: try again
+            self._set_random_ship(player_name, ship_symbol, ship_size)
     
     def _get_occupied_positions(self, player_name: str) -> List[Tuple[int, int]]:
         """Get list of occupied positions on player's placement board.
@@ -274,12 +352,18 @@ class Game:
         firing_board = self.players[player_name].firing_board.board
         placement_board = self.players[player_name].placement_board.board
         
+        # Get opponent player information
+        opponent_player = [k for k in self.player_names if k != player_name][0]
+        opponent_left_ships = self.players[opponent_player].left_ships if hasattr(self.players[opponent_player], 'left_ships') else None
+        
         # Use the Rich UI to display side-by-side boards with ship status
         ui.display_boards_side_by_side(
             player_name=player_name,
             firing_board=firing_board,
             placement_board=placement_board,
-            ships_config=self.config.ship_dict
+            ships_config=self.config.ship_dict,
+            opponent_name=opponent_player,
+            opponent_left_ships=opponent_left_ships
         )
 
     def get_fire_location(self, player_name: str) -> None:
