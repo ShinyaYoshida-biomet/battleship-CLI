@@ -124,7 +124,6 @@ class Game:
         
         ship_display = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
         
-        self.get_orient(player_name, ship_symbol, ship_size)
         status = False
         attempts = 0
         
@@ -137,8 +136,8 @@ class Game:
                 ui.console.print("[yellow]   • Ship would overlap with another ship[/yellow]")
                 ui.console.print("[yellow]   Let's try a different position...[/yellow]\n")
             
-            # get information to set a battleship
-            self.get_location(ship_symbol, ship_size)
+            # get ship placement using single command
+            self.get_ship_placement(player_name, ship_symbol, ship_size)
             status = self.players[player_name].placement_board.set_ship(
                 self.orient,
                 self.x,
@@ -153,7 +152,7 @@ class Game:
         
         # Show the updated board after successful placement
         placement_board = self.players[player_name].placement_board.board
-        board_table = ui.create_board_table(placement_board, f"🚢 {player_name}'s Fleet (Updated)", show_ships=True)
+        board_table = ui.create_board_table(placement_board, f"🚢 Your Ships (Updated)", show_ships=True)
         ui.console.print(board_table)
 
     def _set_computer_ship(
@@ -221,55 +220,29 @@ class Game:
         
         return occupied
 
-    def get_orient(
+    def get_ship_placement(
         self,
         player_name: str,
         ship_symbol: str,
-        ship_size: str
+        ship_size: int
     ) -> None:
-        """Function to set orientation obtained from CLI using Rich UI
+        """Function to get ship placement using single command format.
 
         Args: 
             player_name (str): Name of turn player.
             ship_symbol (str): The name(symbol) of a ship to set.
             ship_size (int): The length of a ship to set.
         """
-        # Use Rich UI for ship orientation prompt
-        orient = ui.prompt_ship_orientation(player_name, ship_symbol, int(ship_size))
-        
-        # Convert to format expected by game logic
-        if orient.lower() in ['h', 'horizontal']:
-            self.orient = 'h'
-        else:
-            self.orient = 'v'
-
-    def get_location(
-        self,
-        ship_symbol: str,
-        ship_size: int
-    ) -> None:
-        """Function to set location obtained from CLI using Rich UI
-
-        Args: 
-            ship_symbol (str): The name(symbol) of a ship to set.
-            ship_size (int): The length of a ship to set.
-        """
-        ship_names = {
-            'C': 'Carrier',
-            'B': 'Battleship', 
-            'D': 'Destroyer',
-            'S': 'Submarine',
-            'P': 'Patrol boat'
-        }
-        
-        ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
         board_size = (self.config.row_num, self.config.column_num)
         
-        # Use Rich UI for location prompt
-        row, col = ui.prompt_ship_location(ship_name, ship_size, board_size)
+        # Use Rich UI for single command ship placement
+        orient, row, col = ui.prompt_ship_placement(player_name, ship_symbol, ship_size, board_size)
         
+        # Set game instance variables
+        self.orient = orient
         self.x = row
         self.y = col
+
 
     def display_placement_board(self, player_name: str) -> None:
         """Function to display placement board
@@ -279,7 +252,7 @@ class Game:
         """
         # This method is deprecated - use display_boards_side_by_side instead
         placement_board = self.players[player_name].placement_board.board
-        ui.create_board_table(placement_board, f"🚢 {player_name}'s Fleet", show_ships=True)
+        ui.create_board_table(placement_board, f"🚢 Your Ships", show_ships=True)
 
     def display_firing_board(self, player_name: str) -> None:
         """Function to display firing board
@@ -289,7 +262,7 @@ class Game:
         """
         # This method is deprecated - use display_boards_side_by_side instead
         firing_board = self.players[player_name].firing_board.board
-        ui.create_board_table(firing_board, f"🎯 {player_name}'s Attack Board", show_ships=False)
+        ui.create_board_table(firing_board, f"🎯 Your Attacks", show_ships=False)
 
     def display_boards_side_by_side(self, player_name: str) -> None:
         """Display firing and placement boards side by side using Rich UI.

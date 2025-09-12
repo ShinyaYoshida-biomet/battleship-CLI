@@ -145,13 +145,13 @@ class BattleshipUI:
         
         firing_table = self.create_board_table(
             firing_board, 
-            f"🎯 {player_name}'s Attack Board", 
+            f"🎯 Your Attacks on Enemy", 
             show_ships=False
         )
         
         placement_table = self.create_board_table(
             placement_board, 
-            f"🚢 {player_name}'s Fleet", 
+            f"🚢 Your Ships", 
             show_ships=True
         )
         
@@ -204,54 +204,50 @@ class BattleshipUI:
         )
         self.console.print(panel)
         
-    def prompt_ship_orientation(self, player_name: str, ship_symbol: str, ship_size: int) -> str:
-        """Prompt for ship orientation."""
+    def prompt_ship_placement(self, player_name: str, ship_symbol: str, ship_size: int, board_size: tuple) -> tuple:
+        """Prompt for ship placement using single command format."""
         ship_names = {
             'C': 'Carrier',
-            'B': 'Battleship',
+            'B': 'Battleship', 
             'D': 'Destroyer',
-            'S': 'Submarine', 
+            'S': 'Submarine',
             'P': 'Patrol boat'
         }
         
         ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+        max_row, max_col = board_size[0] - 1, board_size[1] - 1
         
         self.console.print(f"\n[bold]🚢 {player_name}, placing your {ship_name}[/bold]")
         self.console.print(f"   Size: [yellow]{ship_size}[/yellow] cells")
-        self.console.print("   Orientation:")
-        self.console.print("   [green]H[/green] = Horizontal (→→→)")
-        self.console.print("   [blue]V[/blue] = Vertical   (↓)")
-        self.console.print("                  (↓)")
-        self.console.print("                  (↓)")
-        
-        return Prompt.ask("Enter orientation", choices=["h", "v", "H", "V"], default="h").lower()
-        
-    def prompt_ship_location(self, ship_name: str, ship_size: int, board_size: tuple) -> tuple:
-        """Prompt for ship starting location."""
-        max_row, max_col = board_size[0] - 1, board_size[1] - 1
-        
-        self.console.print(f"\n[bold]📍 Where to place your {ship_name}?[/bold]")
-        self.console.print(f"   Ship length: [yellow]{ship_size}[/yellow] cells")
+        self.console.print("   Command format: [yellow]orientation row column[/yellow]")
+        self.console.print("   • [green]h row column[/green] = Horizontal (→→→)")
+        self.console.print("   • [blue]v row column[/blue] = Vertical (↓↓↓)")
         self.console.print(f"   Valid coordinates: [dim]0-{max_row} for rows, 0-{max_col} for columns[/dim]")
         
         while True:
-            location_str = Prompt.ask("Starting position (row column)", default="0 0")
+            command_str = Prompt.ask("Placement command", default="h 0 0")
             try:
-                parts = location_str.strip().split()
-                if len(parts) != 2:
-                    self.console.print("[red]❌ Please enter two numbers separated by space[/red]")
+                parts = command_str.strip().split()
+                if len(parts) != 3:
+                    self.console.print("[red]❌ Please use format: orientation row column (e.g., 'v 3 2')[/red]")
+                    continue
+                
+                orientation, row_str, col_str = parts[0], parts[1], parts[2]
+                
+                if orientation.lower() not in ['h', 'v']:
+                    self.console.print("[red]❌ Orientation must be 'h' or 'v' (e.g., 'h 3 2')[/red]")
                     continue
                     
-                row, col = int(parts[0]), int(parts[1])
+                row, col = int(row_str), int(col_str)
                 
                 if not (0 <= row <= max_row and 0 <= col <= max_col):
                     self.console.print(f"[red]❌ Coordinates out of bounds! Valid range: 0-{max_row}, 0-{max_col}[/red]")
                     continue
                     
-                return row, col
+                return orientation.lower(), row, col
                 
             except ValueError:
-                self.console.print("[red]❌ Please enter valid numbers[/red]")
+                self.console.print("[red]❌ Please enter valid numbers (e.g., 'v 3 2')[/red]")
                 
     def prompt_fire_location(self, player_name: str, board_size: tuple) -> tuple:
         """Prompt for firing location using single command format."""
