@@ -7,9 +7,11 @@ rich>=13.0.0           # Beautiful terminal UI library
 inquirer3>=0.4.0       # Interactive command-line prompts with arrow key navigation
 pyinstaller>=6.0.0     # Binary building tool
 
+# Testing and development dependencies  
+pytest>=7.0.0           # Testing framework for unit tests
+pytest-cov>=4.0.0       # Coverage reporting
+
 # Optional development dependencies
-# Note: Add these if setting up development environment
-# pytest>=7.0.0        # Testing framework (not currently used)
 # black>=22.0.0         # Code formatting (not currently configured)
 # flake8>=5.0.0         # Linting (not currently configured)
 # mypy>=1.0.0           # Type checking (not currently configured)
