@@ -177,7 +177,7 @@ class BattleshipUI:
             # Add opponent status if available
             if opponent_left_ships is not None:
                 opponent_status_panel = self.create_opponent_status_panel(
-                    opponent_left_ships, ships_config, opponent_name
+                    opponent_left_ships, ships_config, firing_board, opponent_name
                 )
                 status_panels.append(opponent_status_panel)
             
@@ -190,12 +190,10 @@ class BattleshipUI:
 
     def create_ship_status_panel(self, placement_board: pd.DataFrame, ships_config: dict) -> Panel:
         """Create a panel showing current ship status."""
-        ship_names = {
-            'C': 'Carrier', 'B': 'Battleship', 'D': 'Destroyer',
-            'S': 'Submarine', 'P': 'Patrol boat'
-        }
+        from ship_status import ShipStatus, determine_ship_status, get_ship_names
         
-        status_text = "[bold]🚢 Ship Status:[/bold]\n"
+        ship_names = get_ship_names()
+        status_text = "[bold]🚢 Your Fleet:[/bold]\n"
         
         # Get all cells from placement board
         all_cells = placement_board.values.flatten().tolist()
@@ -206,15 +204,11 @@ class BattleshipUI:
             # Count remaining cells for this ship
             remaining_cells = sum(1 for cell in all_cells if cell == ship_symbol)
             
-            if remaining_cells == 0:
-                # Ship is destroyed
-                status_text += f"  [red]💥 {ship_name}: DESTROYED[/red]\n"
-            elif remaining_cells < ship_size:
-                # Ship is damaged
-                status_text += f"  [yellow]⚠️  {ship_name}: DAMAGED ({remaining_cells}/{ship_size})[/yellow]\n"
-            else:
-                # Ship is intact
-                status_text += f"  [green]✅ {ship_name}: INTACT ({remaining_cells}/{ship_size})[/green]\n"
+            # Determine status using enum
+            status = determine_ship_status(remaining_cells, ship_size, is_enemy=False)
+            
+            # Format and add to status text
+            status_text += status.format_status(ship_name, remaining_cells, ship_size) + "\n"
         
         return Panel(
             status_text.rstrip(),
@@ -223,31 +217,68 @@ class BattleshipUI:
             padding=(0, 1)
         )
 
-    def create_opponent_status_panel(self, opponent_left_ships: list, ships_config: dict, opponent_name: str = "Enemy") -> Panel:
-        """Create a panel showing opponent's ship status based on remaining ships."""
-        ship_names = {
-            'C': 'Carrier', 'B': 'Battleship', 'D': 'Destroyer',
-            'S': 'Submarine', 'P': 'Patrol boat'
-        }
+    def create_opponent_status_panel(self, opponent_left_ships: list, ships_config: dict, 
+                                     firing_board: pd.DataFrame = None, opponent_name: str = "Enemy") -> Panel:
+        """Create a panel showing opponent's ship status based on remaining ships and attack results."""
+        from ship_status import ShipStatus, get_ship_names
         
-        status_text = f"[bold]🎯 {opponent_name}'s Fleet:[/bold]\n"
+        ship_names = get_ship_names()
+        status_text = f"[bold]🎯 {opponent_name} Fleet:[/bold]\n"
+        
+        # Analyze enemy intel using attack data
+        intel = self.analyze_enemy_intel(firing_board, opponent_left_ships, ships_config)
         
         for ship_symbol, ship_size in ships_config.items():
             ship_name = ship_names.get(ship_symbol, f'Ship {ship_symbol}')
+            status_key = intel.get(ship_symbol, "UNKNOWN")
             
-            if ship_symbol in opponent_left_ships:
-                # Ship is still alive (we don't know how damaged it is from firing board)
-                status_text += f"  [yellow]❓ {ship_name}: UNKNOWN[/yellow]\n"
+            # Map analysis result to enum
+            if status_key == "DESTROYED":
+                status = ShipStatus.DESTROYED
+            elif status_key == "HIT/DAMAGED":
+                status = ShipStatus.HIT_DAMAGED
             else:
-                # Ship is completely destroyed
-                status_text += f"  [red]💥 {ship_name}: DESTROYED[/red]\n"
+                status = ShipStatus.UNKNOWN
+            
+            # Format status consistently
+            status_text += status.format_status(ship_name) + "\n"
         
         return Panel(
             status_text.rstrip(),
-            title=f"📊 Enemy Intel",
+            title="📊 Enemy Intel",
             border_style="bright_red",
             padding=(0, 1)
         )
+
+    
+    def analyze_enemy_intel(self, firing_board: pd.DataFrame, opponent_left_ships: list, 
+                           ships_config: dict) -> dict:
+        """Analyze enemy ship status from firing board and remaining ships."""
+        if firing_board is None:
+            return {}
+            
+        # Count hits on firing board
+        all_firing_cells = firing_board.values.flatten().tolist()
+        total_hits = sum(1 for cell in all_firing_cells if cell == 'O')
+        
+        # Calculate total ship cells for destroyed ships
+        destroyed_ships = [ship for ship in ships_config.keys() if ship not in opponent_left_ships]
+        destroyed_cells = sum(ships_config[ship] for ship in destroyed_ships)
+        
+        # If we have more hits than destroyed ship cells, some remaining ships are hit
+        hits_on_remaining = max(0, total_hits - destroyed_cells)
+        
+        intel = {}
+        for ship_symbol in ships_config.keys():
+            if ship_symbol not in opponent_left_ships:
+                intel[ship_symbol] = "DESTROYED"
+            elif hits_on_remaining > 0:
+                intel[ship_symbol] = "HIT/DAMAGED"
+                hits_on_remaining -= 1  # Account for this hit
+            else:
+                intel[ship_symbol] = "UNKNOWN"
+                
+        return intel
         
     def prompt_game_mode(self) -> str:
         """Prompt user for game mode selection."""

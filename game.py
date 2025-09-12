@@ -354,6 +354,9 @@ class Game:
         
         # Get opponent player information
         opponent_player = [k for k in self.player_names if k != player_name][0]
+        
+        # Make sure opponent's ship status is up to date
+        self.players[opponent_player].get_left_ships()
         opponent_left_ships = self.players[opponent_player].left_ships if hasattr(self.players[opponent_player], 'left_ships') else None
         
         # Use the Rich UI to display side-by-side boards with ship status
