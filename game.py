@@ -19,7 +19,6 @@ from config import Config
 from player import Player
 from computer_ai import ComputerAI
 from ui import ui
-from reactive_board_manager import reactive_manager
 
 
 class Game:
@@ -78,9 +77,6 @@ class Game:
                 player_name, placement_board, firing_board, self.config)
 
         self.players = players
-        
-        # Initialize reactive board management
-        self._initialize_reactive_boards()
 
     def set_ships(
         self,
@@ -224,27 +220,6 @@ class Game:
                     occupied.append((x, y))
         
         return occupied
-    
-    def _initialize_reactive_boards(self) -> None:
-        """Initialize reactive board management for all players."""
-        for player_name in self.player_names:
-            firing_board = self.players[player_name].firing_board.board
-            placement_board = self.players[player_name].placement_board.board
-            reactive_manager.register_player(player_name, firing_board, placement_board)
-    
-    def start_reactive_display(self, player_name: str) -> None:
-        """Start reactive board display for a player's turn.
-        
-        Args:
-            player_name (str): Name of the player whose turn it is
-        """
-        if self.is_human_player(player_name):
-            # Show static board instead of reactive display to avoid input blocking
-            self.display_boards_side_by_side(player_name)
-    
-    def stop_reactive_display(self) -> None:
-        """Stop current reactive display."""
-        reactive_manager.cleanup()
 
     def get_orient(
         self,
