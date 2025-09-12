@@ -294,9 +294,14 @@ def main():
                 # Fire!
                 game.fire(player, opponent_player)
 
-                # check left ships of the opponent player.
+                # Update ship status for both players
                 game.players[opponent_player].get_left_ships()
                 left_ships = game.players[opponent_player].left_ships
+
+                # Show updated board to human player after their shot
+                if game.is_human_player(player):
+                    time.sleep(1)  # Brief pause to see the result
+                    game.display_boards_side_by_side(player)
 
                 # When there are no left ships game is end.
                 if len(left_ships) == 0:
@@ -310,7 +315,7 @@ def main():
                 
                 # Appropriate pause based on player type
                 if game.is_human_player(player):
-                    time.sleep(0.3)
+                    time.sleep(2)  # Give time to see updated board
                     ui.clear_screen()
                 else:
                     time.sleep(2)

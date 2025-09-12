@@ -276,41 +276,94 @@ class BattleshipUI:
             return player1, "Computer"
 
     def prompt_ship_placement_mode(self, player_name: str) -> str:
-        """Prompt user for ship placement mode."""
-        from rich.console import Console
-        from rich.prompt import Prompt
-        from rich import print as rprint
-        import sys
-        
-        self.console.print(f"\n[bold yellow]🚢 {player_name}, how would you like to place your ships?[/bold yellow]")
-        
-        # Simple, reliable approach
-        self.console.print("\n[dim]Choose your option:[/dim]")
-        self.console.print("  [bold green]1[/bold green]. 🎯 Manual - Place each ship yourself")
-        self.console.print("  [bold green]2[/bold green]. 🎲 Random - Automatically place all ships")
-        self.console.print()
-        
-        while True:
-            try:
-                choice = Prompt.ask(
-                    "[bold cyan]Enter your choice[/bold cyan]", 
-                    choices=["1", "2"], 
-                    default="1",
-                    show_choices=False
+        """Prompt user for ship placement mode with arrow key navigation."""
+        try:
+            import inquirer3
+            
+            self.console.print(f"\n[bold yellow]🚢 {player_name}, how would you like to place your ships?[/bold yellow]\n")
+            
+            questions = [
+                inquirer3.List(
+                    'placement_mode',
+                    message="Choose your placement method",
+                    choices=[
+                        ('🎯 Manual - Place each ship yourself', 'manual'),
+                        ('🎲 Random - Automatically place all ships', 'random'),
+                    ],
+                    default='manual',
+                    carousel=True,  # Allow wrapping around
                 )
+            ]
+            
+            answers = inquirer3.prompt(questions)
+            
+            if answers is None:  # User pressed Ctrl+C
+                raise KeyboardInterrupt
                 
-                if choice == "1":
-                    self.console.print("[green]✓ Manual placement selected![/green]")
-                    return "manual"
-                else:
-                    self.console.print("[green]✓ Random placement selected![/green]")
-                    return "random"
+            selected_mode = answers['placement_mode']
+            
+            # Show confirmation with Rich styling
+            if selected_mode == 'manual':
+                self.console.print("[green]✓ Manual placement selected![/green]")
+            else:
+                self.console.print("[green]✓ Random placement selected![/green]")
+                
+            return selected_mode
+            
+        except ImportError:
+            # Fallback to Rich-only prompt if inquirer3 is not available
+            self.console.print(f"[yellow]Arrow keys not available. Using number selection.[/yellow]")
+            
+            self.console.print("\n[dim]Choose your option:[/dim]")
+            self.console.print("  [bold green]1[/bold green]. 🎯 Manual - Place each ship yourself")
+            self.console.print("  [bold green]2[/bold green]. 🎲 Random - Automatically place all ships")
+            self.console.print()
+            
+            from rich.prompt import Prompt
+            
+            while True:
+                try:
+                    choice = Prompt.ask(
+                        "[bold cyan]Enter your choice[/bold cyan]", 
+                        choices=["1", "2"], 
+                        default="1",
+                        show_choices=False
+                    )
                     
-            except KeyboardInterrupt:
-                raise
-            except Exception:
-                self.console.print("[red]Invalid choice. Please enter 1 or 2.[/red]")
-                continue
+                    if choice == "1":
+                        self.console.print("[green]✓ Manual placement selected![/green]")
+                        return "manual"
+                    else:
+                        self.console.print("[green]✓ Random placement selected![/green]")
+                        return "random"
+                        
+                except KeyboardInterrupt:
+                    raise
+                except Exception:
+                    self.console.print("[red]Invalid choice. Please enter 1 or 2.[/red]")
+                    continue
+                    
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            # If anything goes wrong with inquirer3, fallback to Rich prompt
+            self.console.print(f"[yellow]Interactive prompt failed: {e}[/yellow]")
+            self.console.print("[yellow]Using simple selection instead.[/yellow]")
+            
+            from rich.prompt import Prompt
+            
+            self.console.print("\n[dim]Choose your option:[/dim]")
+            self.console.print("  [bold green]1[/bold green]. 🎯 Manual - Place each ship yourself")
+            self.console.print("  [bold green]2[/bold green]. 🎲 Random - Automatically place all ships")
+            
+            choice = Prompt.ask("Enter your choice", choices=["1", "2"], default="1")
+            
+            if choice == "1":
+                self.console.print("[green]✓ Manual placement selected![/green]")
+                return "manual"
+            else:
+                self.console.print("[green]✓ Random placement selected![/green]")
+                return "random"
             
     def announce_vs(self, player1: str, player2: str):
         """Announce the matchup."""
