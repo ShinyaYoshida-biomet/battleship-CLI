@@ -105,6 +105,18 @@ class WebInputAdapter(GameInputPort):
         
         response = await self.connection.receive_json()
         return response["player1"], response["player2"]
+
+    async def get_ship_placement_mode(self, player_name: str) -> str:
+        """Get ship placement mode from web client."""
+        
+        request = {
+            "type": "ship_placement_mode_request",
+            "player_name": player_name
+        }
+        await self.connection.send_json(request)
+        
+        response = await self.connection.receive_json()
+        return response["mode"]  # "manual" or "random"
     
     def _serialize_board(self, board) -> Optional[list]:
         """Serialize pandas DataFrame to list for JSON."""

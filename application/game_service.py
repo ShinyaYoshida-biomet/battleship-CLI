@@ -82,41 +82,51 @@ class GameService:
         for player_info in self.game_state.players:
             player_name = player_info.name
             
-            for ship_symbol, ship_size in self.game_state.ships_config.items():
-                ship = Ship(ship_symbol, ship_size, self._get_ship_name(ship_symbol))
-                
-                # Show current board state
-                placement_board = self.game_engine.players[player_name].placement_board.board
-                await self.output_port.show_game_state(
-                    self.game_state,
-                    placement_board=placement_board
-                )
-                
-                if player_info.player_type == PlayerType.HUMAN:
-                    # Get placement from user
-                    context = PlacementContext(
-                        player_name=player_name,
-                        ship=ship,
-                        board_size=self.game_state.board_size,
-                        current_board_state=placement_board
+            # Ask human players for placement mode
+            placement_mode = "random"  # Default for AI
+            if player_info.player_type == PlayerType.HUMAN:
+                placement_mode = await self.input_port.get_ship_placement_mode(player_name)
+            
+            if placement_mode == "random":
+                # Random placement for all ships at once
+                await self._execute_random_ship_placement(player_name)
+            else:
+                # Manual placement - ship by ship
+                for ship_symbol, ship_size in self.game_state.ships_config.items():
+                    ship = Ship(ship_symbol, ship_size, self._get_ship_name(ship_symbol))
+                    
+                    # Show current board state
+                    placement_board = self.game_engine.players[player_name].placement_board.board
+                    await self.output_port.show_game_state(
+                        self.game_state,
+                        placement_board=placement_board
                     )
-                    placement = await self.input_port.get_ship_placement(context)
-                else:
-                    # Get placement from AI
-                    context = PlacementContext(
-                        player_name=player_name,
-                        ship=ship,
-                        board_size=self.game_state.board_size,
-                        current_board_state=placement_board
-                    )
-                    placement = await self.ai_port.get_ship_placement_decision(context)
-                
-                # Execute placement using existing game engine
-                result = await self._execute_ship_placement(placement)
-                await self.output_port.show_placement_result(result)
-                
-                if not result.success:
-                    await self.output_port.show_error(result.message)
+                    
+                    if player_info.player_type == PlayerType.HUMAN:
+                        # Get placement from user
+                        context = PlacementContext(
+                            player_name=player_name,
+                            ship=ship,
+                            board_size=self.game_state.board_size,
+                            current_board_state=placement_board
+                        )
+                        placement = await self.input_port.get_ship_placement(context)
+                    else:
+                        # Get placement from AI
+                        context = PlacementContext(
+                            player_name=player_name,
+                            ship=ship,
+                            board_size=self.game_state.board_size,
+                            current_board_state=placement_board
+                        )
+                        placement = await self.ai_port.get_ship_placement_decision(context)
+                    
+                    # Execute placement using existing game engine
+                    result = await self._execute_ship_placement(placement)
+                    await self.output_port.show_placement_result(result)
+                    
+                    if not result.success:
+                        await self.output_port.show_error(result.message)
         
         # Move to battle phase
         self.game_state.phase = GamePhase.BATTLE
@@ -240,17 +250,17 @@ class GameService:
             opponent_name = next(p.name for p in self.game_state.players 
                                if p.name != fire_action.player_name)
             
-            # Execute fire using existing logic
-            self.game_engine.fire(fire_action.player_name, opponent_name)
-            
-            # Check hit/miss
+            # Check hit/miss BEFORE executing fire (before board is modified)
             target_symbol = self.game_engine.players[opponent_name].placement_board.board.iloc[
                 fire_action.target_position.row, fire_action.target_position.col
             ]
             
             hit = target_symbol in self.game_state.ships_config.keys()
             
-            # Check if ship is destroyed
+            # Execute fire using existing logic (this will modify the board)
+            self.game_engine.fire(fire_action.player_name, opponent_name)
+            
+            # Check if ship is destroyed AFTER firing
             ship_destroyed = False
             if hit:
                 opponent_board = self.game_engine.players[opponent_name].placement_board.board
@@ -273,3 +283,72 @@ class GameService:
             
         except Exception as e:
             return FireResult(False, None, False, None)
+
+    async def _execute_random_ship_placement(self, player_name: str) -> None:
+        """Execute random placement for all ships of a player."""
+        import random
+        
+        await self.output_port.show_placement_result(
+            GameResult(True, f"🎲 Placing {player_name}'s ships randomly...")
+        )
+        
+        for ship_symbol, ship_size in self.game_state.ships_config.items():
+            ship = Ship(ship_symbol, ship_size, self._get_ship_name(ship_symbol))
+            
+            # Try random placement with retry logic
+            max_attempts = 100
+            placed = False
+            
+            for attempt in range(max_attempts):
+                # Random orientation and position
+                orientation = random.choice(['h', 'v'])
+                
+                if orientation == 'h':
+                    max_row = self.game_state.board_size[0]
+                    max_col = self.game_state.board_size[1] - ship_size + 1
+                else:
+                    max_row = self.game_state.board_size[0] - ship_size + 1
+                    max_col = self.game_state.board_size[1]
+                
+                if max_row <= 0 or max_col <= 0:
+                    continue
+                    
+                row = random.randint(0, max_row - 1)
+                col = random.randint(0, max_col - 1)
+                
+                # Create placement
+                placement = ShipPlacement(
+                    player_name=player_name,
+                    ship=ship,
+                    orientation=orientation,
+                    start_position=Position(row, col)
+                )
+                
+                # Try to place the ship
+                result = await self._execute_ship_placement(placement)
+                if result.success:
+                    placed = True
+                    break
+                    
+            if not placed:
+                # Fallback: use AI placement
+                placement_board = self.game_engine.players[player_name].placement_board.board
+                context = PlacementContext(
+                    player_name=player_name,
+                    ship=ship,
+                    board_size=self.game_state.board_size,
+                    current_board_state=placement_board
+                )
+                placement = await self.ai_port.get_ship_placement_decision(context)
+                await self._execute_ship_placement(placement)
+        
+        # Show final board after all placements
+        placement_board = self.game_engine.players[player_name].placement_board.board
+        await self.output_port.show_game_state(
+            self.game_state,
+            placement_board=placement_board
+        )
+        
+        await self.output_port.show_placement_result(
+            GameResult(True, f"✅ {player_name}'s ships placed randomly!")
+        )

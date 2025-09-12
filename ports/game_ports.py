@@ -37,6 +37,11 @@ class GameInputPort(ABC):
     async def get_player_names(self, game_mode: str) -> Tuple[str, str]:
         """Get player names for the game."""
         pass
+    
+    @abstractmethod
+    async def get_ship_placement_mode(self, player_name: str) -> str:
+        """Get ship placement mode (manual or random) from user interface."""
+        pass
 
 
 class GameOutputPort(ABC):

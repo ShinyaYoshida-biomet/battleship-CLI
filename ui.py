@@ -231,6 +231,22 @@ class BattleshipUI:
         else:
             player1 = Prompt.ask("[bold blue]Player[/bold blue], enter your name", default="Player")
             return player1, "Computer"
+
+    def prompt_ship_placement_mode(self, player_name: str) -> str:
+        """Prompt user for ship placement mode."""
+        self.console.print(f"\n[bold yellow]🚢 {player_name}, how would you like to place your ships?[/bold yellow]")
+        
+        choices = {
+            "1": ("manual", "🎯 Manual - Place each ship yourself"),
+            "2": ("random", "🎲 Random - Automatically place all ships")
+        }
+        
+        for key, (_, description) in choices.items():
+            self.console.print(f"  {key}. {description}")
+            
+        while True:
+            choice = Prompt.ask("Choose placement mode", choices=list(choices.keys()), default="1")
+            return choices[choice][0]
             
     def announce_vs(self, player1: str, player2: str):
         """Announce the matchup."""

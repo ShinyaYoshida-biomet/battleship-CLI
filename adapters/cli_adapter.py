@@ -53,6 +53,10 @@ class CLIInputAdapter(GameInputPort):
         """Get player names from CLI."""
         return ui.prompt_player_names(game_mode)
 
+    async def get_ship_placement_mode(self, player_name: str) -> str:
+        """Get ship placement mode from CLI."""
+        return ui.prompt_ship_placement_mode(player_name)
+
 
 class CLIOutputAdapter(GameOutputPort):
     """CLI implementation of GameOutputPort using Rich UI."""
