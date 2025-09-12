@@ -1,29 +1,29 @@
-# 🚢 Battleship CLI
+# Battleship CLI
 
 <img width="454" alt="Battleship CLI Game" src="https://github.com/ShinyaYoshida-biomet/battleship-CLI/assets/33049408/8b26714d-93f3-4f64-a6e7-fc24f80c1010">
 
-## 💖 Welcome to Battleship CLI!
+## Welcome to Battleship CLI
 
-Welcome to the world of naval warfare! This is a beautiful, beginner-friendly terminal-based Battleship game that anyone can enjoy. 🎮
+Welcome to the world of naval warfare! This is a beautiful, beginner-friendly terminal-based Battleship game that anyone can enjoy.
 
-## ✨ Key Features
+## Key Features
 
-- **🎯 Two Game Modes**: Play against friends (PvP) or challenge the computer (PvC)
-- **🤖 Smart AI Opponent**: Intelligent computer player with strategic thinking
-- **🎨 Beautiful UI**: Colorful and easy-to-read terminal interface
-- **🎲 Easy Ship Placement**: Choose between manual placement or automatic random placement
-- **📊 Real-time Battle Status**: Live tracking of enemy fleet destruction progress
-- **⌨️ Smooth Controls**: Intuitive operation with safe Ctrl+C exit anytime
+- **Two Game Modes**: Play against friends (PvP) or challenge the computer (PvC)
+- **Smart AI Opponent**: Intelligent computer player with strategic thinking
+- **Beautiful UI**: Colorful and easy-to-read terminal interface
+- **Easy Ship Placement**: Choose between manual placement or automatic random placement
+- **Real-time Battle Status**: Live tracking of enemy fleet destruction progress
+- **Smooth Controls**: Intuitive operation with safe Ctrl+C exit anytime
 
-## 🎯 What is Battleship?
+## What is Battleship?
 
 Battleship is a classic strategy game where players place ships on a grid and take turns guessing locations to sink their opponent's fleet. The first player to sink all enemy ships wins!
 
-## 🚀 Let's Get Started!
+## Getting Started
 
 ### Step 1: Installation
 
-**🚀 Easy Install (Recommended)** - No Python required:
+<!-- **Easy Install (Recommended)** - No Python required:
 
 ```bash
 # One-liner installation for macOS/Linux
@@ -31,9 +31,9 @@ curl -sSL https://raw.githubusercontent.com/ShinyaYoshida-biomet/battleship-CLI/
 
 # Or download binary manually from GitHub Releases
 # https://github.com/ShinyaYoshida-biomet/battleship-CLI/releases
-```
+``` -->
 
-**🐍 From Source** (for developers):
+**Installation** (Python required):
 
 ```bash
 # Clone the repository
@@ -44,23 +44,9 @@ cd battleship-CLI
 pip install -r requirements.txt
 ```
 
-💡 **Need help?**: 
-- For binary install: No Python needed! Just download and run
-- For source install: Get Python from [official website](https://www.python.org/downloads/)
+**Need help?**: Get Python from the [official website](https://www.python.org/downloads/)
 
 ### Step 2: Starting the Game
-
-**If you installed via binary**:
-
-```bash
-# Super simple! Follow the prompts to set up your game
-battleship
-
-# Or with direct setup
-battleship --mode pvc --player1 YourName
-```
-
-**If you're running from source**:
 
 ```bash
 # Super simple! Follow the prompts to set up your game
@@ -73,8 +59,8 @@ python main.py --mode pvc --player1 YourName
 ### Step 3: Game Flow
 
 1. **Choose Ship Placement Method**
-   - 🎯 Manual: Place each ship one by one
-   - 🎲 Random: Automatically place all ships
+   - Manual: Place each ship one by one
+   - Random: Automatically place all ships
 
 2. **Place Your Ships**
    - Specify coordinates and orientation (horizontal/vertical)
@@ -83,12 +69,12 @@ python main.py --mode pvc --player1 YourName
 3. **Battle Begins!**
    - Guess enemy ship locations and attack
    - Example: `3 7` (attack row 3, column 7)
-   - 🎯 = Hit, ❌ = Miss
+   - Hit or Miss feedback
 
 4. **Victory Condition**
    - Sink all enemy ships to win!
 
-## 🎮 Game Modes & Commands
+## Game Modes & Commands
 
 ### Basic Commands
 
@@ -122,7 +108,7 @@ python main.py --ships C:5 B:4 D:3 S:3 P:2 --board-size 12 12
 python main.py --config config_files/battleship_config.txt
 ```
 
-## 🆘 Troubleshooting & Tips
+## Troubleshooting & Tips
 
 ### Common Issues & Solutions
 
@@ -146,14 +132,14 @@ python main.py --config config_files/battleship_config.txt
    - Coordinates start from 0 (0,1,2,3...)
    - Example: Top-right corner is `0 6` (for 7x7 board)
 
-### Gameplay Tips 💡
+### Gameplay Tips
 
 - **Ship Placement**: `h 2 3` = place horizontally starting at row 2, column 3
 - **Ship Placement**: `v 1 0` = place vertically starting at row 1, column 0  
 - **Attacking**: `4 5` = attack row 4, column 5
 - **Exit**: Press Ctrl+C anytime to safely quit
 
-## 🎨 Beautiful UI Features
+## Beautiful UI Features
 
 ### Battle Status Display
 ```
@@ -167,17 +153,17 @@ python main.py --config config_files/battleship_config.txt
 
 ### Key Features
 - **Side-by-side Board Display**: View your attack board and ship positions simultaneously
-- **Color-coded Results**: 🎯 Hit=Green, ❌ Miss=Red, 🚢 Ships=Blue
+- **Color-coded Results**: Hit=Green, Miss=Red, Ships=Blue
 - **Real-time Updates**: Enemy fleet destruction status updates instantly
 - **Beautiful Tables**: Clean formatting enhances gameplay experience
 
-## 🤖 AI Features (Computer Battles)
+## AI Features (Computer Battles)
 
 - **Strategic Ship Placement**: AI uses unpredictable patterns to place ships
 - **Hunt/Target Strategy**: Intelligent firing patterns to locate and sink ships
 - **Adaptive Learning**: AI systematically destroys ships after scoring hits
 
-## 📋 CLI Reference
+## CLI Reference
 
 ```bash
 usage: main.py [-h] [--mode {pvp,pvc,prompt}] [--board-size ROWS COLS]
@@ -192,7 +178,7 @@ Options:
   --player1, --player2        Player names
 ```
 
-## 🎉 Ready to Battle?
+## Ready to Battle?
 
 This Battleship CLI is designed for everyone from beginners to experienced players. If you need help:
 
@@ -200,11 +186,11 @@ This Battleship CLI is designed for everyone from beginners to experienced playe
 - Press Ctrl+C to safely exit anytime
 - Report bugs or request features via [Issues](https://github.com/ShinyaYoshida-biomet/battleship-CLI/issues)
 
-**Have an amazing battleship experience!** ⚓️
+**Have an amazing battleship experience!**
 
 ---
 
-## 🛠️ Technical Details
+## Technical Details
 
 ### Dependencies
 
@@ -220,7 +206,7 @@ This Battleship CLI is designed for everyone from beginners to experienced playe
 pip install rich typer pandas inquirer3
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! This project uses:
 
@@ -230,10 +216,10 @@ Contributions are welcome! This project uses:
 - Rich library for modern terminal UI
 - MVC architecture for clean code structure
 
-## 📜 License
+## License
 
 This project is open source. Feel free to use, modify, and distribute as needed.
 
 ---
 
-**🚢 Happy Battleshipping!** Made with ❤️ for terminal game lovers.
+**Happy Battleshipping!** Made for terminal game lovers.
