@@ -2,6 +2,10 @@
 
 <img width="454" alt="Battleship CLI Game" src="https://github.com/ShinyaYoshida-biomet/battleship-CLI/assets/33049408/8b26714d-93f3-4f64-a6e7-fc24f80c1010">
 
+## Demo Video
+
+https://github.com/user-attachments/assets/2159a941-196a-46c9-979e-5887237b8bcc
+
 ## Welcome to Battleship CLI
 
 Welcome to the world of naval warfare! This is a beautiful, beginner-friendly terminal-based Battleship game that anyone can enjoy.
