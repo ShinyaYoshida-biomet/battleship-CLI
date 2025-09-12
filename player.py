@@ -11,7 +11,6 @@ Example:
     print(player_x.placement_board.board)
 """
 
-import numpy as np
 
 from config import Config
 from board import Board
@@ -103,8 +102,7 @@ class Player:
 
         # Announce destroyed ships
         if len(diff_left_ships) > 0:
-            for destroyed_ship in diff_left_ships:
-                print(f"{self.name}'s {destroyed_ship} is destroyed!")
+            pass  # Ship destruction is handled by UI notifications
         
         # Update left ships
         self.left_ships = current_left_ships
